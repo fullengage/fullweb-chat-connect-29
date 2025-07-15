@@ -3,12 +3,14 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/AppSidebar"
 import { ConversationStats } from "@/components/ConversationStats"
 import { ConversationManagement } from "@/components/ConversationManagement"
+import { ConversationsWithMessagesTable } from "@/components/ConversationsWithMessagesTable"
 import { useConversations, useUsers, useInboxes } from "@/hooks/useSupabaseData"
+import { useConversationsWithMessages } from "@/hooks/useConversationsWithMessages"
 import { Conversation, ConversationForStats } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { RefreshCw, MessageSquare, Settings } from "lucide-react"
+import { RefreshCw, MessageSquare, Settings, Search } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import { supabase } from "@/integrations/supabase/client"
@@ -19,6 +21,8 @@ export default function Conversations() {
   const [assigneeId, setAssigneeId] = useState("all")
   const [inboxId, setInboxId] = useState("all")
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [search, setSearch] = useState("")
+  const [page, setPage] = useState(1)
   const { toast } = useToast()
   const { user: authUser } = useAuth()
 
@@ -64,12 +68,23 @@ export default function Conversations() {
     ...(inboxId !== "all" && { inbox_id: parseInt(inboxId) }),
   }
 
+  // Usar o novo hook para conversas com mensagens
   const {
-    data: conversations = [],
+    data: conversationsWithMessagesData,
     isLoading: conversationsLoading,
     error: conversationsError,
     refetch: refetchConversations
-  } = useConversations(filters)
+  } = useConversationsWithMessages({
+    account_id: accountIdNumber > 0 ? accountIdNumber : undefined,
+    page,
+    limit: 20,
+    status: status !== "all" ? status : undefined,
+    search: search || undefined
+  })
+
+  const conversationsWithMessages = conversationsWithMessagesData?.data || []
+  const totalConversations = conversationsWithMessagesData?.total || 0
+  const hasMoreConversations = conversationsWithMessagesData?.hasMore || false
 
   const {
     data: agents = [],
@@ -89,7 +104,8 @@ export default function Conversations() {
     })
   }
 
-  const filteredConversations = conversations.filter((conversation: Conversation) => {
+  // Filtrar conversas por assignee se necessário
+  const filteredConversations = conversationsWithMessages.filter((conversation) => {
     if (assigneeId === "unassigned") {
       return !conversation.assignee
     }
@@ -97,10 +113,10 @@ export default function Conversations() {
   })
 
   // Convert to ConversationForStats format for the stats component
-  const conversationsForStats: ConversationForStats[] = filteredConversations.map((conv: Conversation) => ({
+  const conversationsForStats: ConversationForStats[] = filteredConversations.map((conv) => ({
     id: conv.id,
     status: conv.status,
-    unread_count: conv.unread_count || 0,
+    unread_count: conv.messages_count || 0,
     contact: {
       id: conv.contact?.id || 0,
       name: conv.contact?.name || 'Contato Desconhecido',
@@ -114,9 +130,9 @@ export default function Conversations() {
       avatar_url: conv.assignee.avatar_url
     } : undefined,
     inbox: {
-      id: conv.inbox?.id || 1,
-      name: conv.inbox?.name || 'Inbox Padrão',
-      channel_type: conv.inbox?.channel_type || 'webchat'
+      id: 1,
+      name: 'Chat Interno',
+      channel_type: 'webchat'
     },
     updated_at: conv.updated_at,
     messages: conv.messages || []
@@ -180,6 +196,20 @@ export default function Conversations() {
                       Conta: <span className="font-medium">{currentUser.account_id}</span>
                     </span>
                   )}
+                </div>
+              </div>
+
+              {/* Campo de busca */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Buscar conversas</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar por nome, email ou telefone do contato..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="h-9 pl-10"
+                  />
                 </div>
               </div>
 
@@ -257,9 +287,13 @@ export default function Conversations() {
                   isLoading={conversationsLoading}
                 />
                 
-                <ConversationManagement
-                  accountId={accountIdNumber}
-                  selectedInboxId={inboxId !== "all" ? parseInt(inboxId) : undefined}
+                <ConversationsWithMessagesTable
+                  conversations={filteredConversations}
+                  isLoading={conversationsLoading}
+                  totalCount={totalConversations}
+                  currentPage={page}
+                  hasMore={hasMoreConversations}
+                  onPageChange={setPage}
                 />
               </div>
             ) : (

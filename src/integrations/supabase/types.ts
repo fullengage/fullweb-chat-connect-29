@@ -678,6 +678,120 @@ export type Database = {
         }
         Relationships: []
       }
+      processed_messages: {
+        Row: {
+          account_id: number
+          ai_analysis: Json | null
+          content: string | null
+          conversation_id: number
+          enriched_data: Json | null
+          id: number
+          message_id: number
+          processed_at: string | null
+          sender_type: string | null
+        }
+        Insert: {
+          account_id: number
+          ai_analysis?: Json | null
+          content?: string | null
+          conversation_id: number
+          enriched_data?: Json | null
+          id?: number
+          message_id: number
+          processed_at?: string | null
+          sender_type?: string | null
+        }
+        Update: {
+          account_id?: number
+          ai_analysis?: Json | null
+          content?: string | null
+          conversation_id?: number
+          enriched_data?: Json | null
+          id?: number
+          message_id?: number
+          processed_at?: string | null
+          sender_type?: string | null
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          account_id: number
+          auto_reply_enabled: boolean | null
+          chatwoot_token: string
+          created_at: string | null
+          id: number
+          slack_notifications: boolean | null
+          webhook_secret: string | null
+        }
+        Insert: {
+          account_id: number
+          auto_reply_enabled?: boolean | null
+          chatwoot_token: string
+          created_at?: string | null
+          id?: number
+          slack_notifications?: boolean | null
+          webhook_secret?: string | null
+        }
+        Update: {
+          account_id?: number
+          auto_reply_enabled?: boolean | null
+          chatwoot_token?: string
+          created_at?: string | null
+          id?: number
+          slack_notifications?: boolean | null
+          webhook_secret?: string | null
+        }
+        Relationships: []
+      }
+      sync_accounts: {
+        Row: {
+          account_id: number
+          active: boolean | null
+          agents_synced: number | null
+          chatwoot_token: string
+          contacts_synced: number | null
+          conversations_synced: number | null
+          created_at: string | null
+          id: number
+          last_sync: string | null
+          last_sync_status: string | null
+          messages_synced: number | null
+          sync_interval_minutes: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: number
+          active?: boolean | null
+          agents_synced?: number | null
+          chatwoot_token: string
+          contacts_synced?: number | null
+          conversations_synced?: number | null
+          created_at?: string | null
+          id?: number
+          last_sync?: string | null
+          last_sync_status?: string | null
+          messages_synced?: number | null
+          sync_interval_minutes?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: number
+          active?: boolean | null
+          agents_synced?: number | null
+          chatwoot_token?: string
+          contacts_synced?: number | null
+          conversations_synced?: number | null
+          created_at?: string | null
+          id?: number
+          last_sync?: string | null
+          last_sync_status?: string | null
+          messages_synced?: number | null
+          sync_interval_minutes?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           account_id: number
