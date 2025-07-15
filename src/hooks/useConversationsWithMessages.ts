@@ -64,7 +64,10 @@ export const useConversationsWithMessages = ({
   return useQuery({
     queryKey: ['conversations-with-messages', account_id, page, limit, status, search, authUser?.id],
     queryFn: async (): Promise<{ data: ConversationWithMessages[], total: number, hasMore: boolean }> => {
+      console.log('🔍 useConversationsWithMessages - Starting fetch:', { account_id, page, limit, status, search })
+      
       if (!authUser) {
+        console.error('❌ No authenticated user')
         throw new Error('User not authenticated')
       }
 
@@ -75,13 +78,16 @@ export const useConversationsWithMessages = ({
         .eq('auth_user_id', authUser.id)
         .single()
 
+      console.log('👤 User data:', userData, 'Error:', userError)
+
       if (userError || !userData) {
-        console.error('User data error:', userError)
+        console.error('❌ User data error:', userError)
         throw new Error('User data not found')
       }
 
       // Calcular offset para paginação
       const offset = (page - 1) * limit
+      console.log('📄 Pagination:', { page, limit, offset })
 
       // Construir query base para conversas
       let conversationsQuery = supabase
@@ -110,14 +116,19 @@ export const useConversationsWithMessages = ({
           )
         `, { count: 'exact' })
 
+      console.log('🏗️ Base query built, applying role-based filters...')
+
       // Aplicar filtros baseados no papel do usuário
       if (userData.role === 'superadmin') {
+        console.log('🔑 Superadmin access - applying account filter:', account_id)
         if (account_id) {
           conversationsQuery = conversationsQuery.eq('account_id', account_id)
         }
       } else if (userData.role === 'admin') {
+        console.log('🔑 Admin access - filtering by user account:', userData.account_id)
         conversationsQuery = conversationsQuery.eq('account_id', userData.account_id)
       } else if (userData.role === 'agent') {
+        console.log('🔑 Agent access - filtering by user account and assignment:', userData.account_id, userData.id)
         conversationsQuery = conversationsQuery
           .eq('account_id', userData.account_id)
           .or(`assignee_id.eq.${userData.id},assignee_id.is.null`)
@@ -142,7 +153,15 @@ export const useConversationsWithMessages = ({
         .order('last_activity_at', { ascending: false })
         .range(offset, offset + limit - 1)
 
+      console.log('🚀 Executing conversations query...')
       const { data: conversations, error: conversationsError, count } = await conversationsQuery
+      
+      console.log('📊 Conversations result:', { 
+        conversations: conversations?.length, 
+        error: conversationsError, 
+        count,
+        firstConv: conversations?.[0] 
+      })
 
       if (conversationsError) {
         console.error('Error fetching conversations:', conversationsError)
@@ -155,6 +174,7 @@ export const useConversationsWithMessages = ({
       }
 
       if (!conversations || conversations.length === 0) {
+        console.log('📭 No conversations found')
         return {
           data: [],
           total: count || 0,
@@ -164,12 +184,19 @@ export const useConversationsWithMessages = ({
 
       // Buscar mensagens para todas as conversas encontradas
       const conversationIds = conversations.map(conv => conv.id)
+      console.log('💬 Fetching messages for conversations:', conversationIds)
       
       const { data: allMessages, error: messagesError } = await supabase
         .from('messages')
         .select('*')
         .in('conversation_id', conversationIds)
         .order('created_at', { ascending: true })
+
+      console.log('💬 Messages result:', { 
+        messages: allMessages?.length, 
+        error: messagesError,
+        firstMessage: allMessages?.[0]
+      })
 
       if (messagesError) {
         console.error('Error fetching messages:', messagesError)
@@ -205,6 +232,13 @@ export const useConversationsWithMessages = ({
             sender_type: lastMessage.sender_type
           } : undefined
         }
+      })
+
+      console.log('✅ Final result:', { 
+        conversations: conversationsWithMessages.length, 
+        totalMessages: conversationsWithMessages.reduce((acc, conv) => acc + conv.messages.length, 0),
+        total: count, 
+        hasMore: offset + limit < (count || 0) 
       })
 
       return {
