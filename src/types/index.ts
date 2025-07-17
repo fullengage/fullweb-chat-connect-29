@@ -101,3 +101,22 @@ export interface Inbox {
   name: string
   channel_type: string
 }
+
+export interface Label {
+  id: number
+  title: string
+  color: string
+  description?: string
+  account_id: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ConversationLabel {
+  id: number
+  conversation_id: number
+  label_id: number
+  account_id: number
+  created_at: string
+  label?: Label
+}

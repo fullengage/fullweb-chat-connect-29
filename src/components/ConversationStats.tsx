@@ -3,14 +3,43 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { MessageCircle, Clock, Users, CheckCircle } from "lucide-react"
 import { ConversationForStats } from "@/types"
+import { useChatwootConversationCounts } from "@/hooks/useChatwootConversationCounts"
 
 interface ConversationStatsProps {
   conversations: ConversationForStats[]
   isLoading?: boolean
+  accountId: string
+  status?: string
+  inboxId?: string
+  teamId?: string
+  labels?: string[]
+  searchQuery?: string
 }
 
-export const ConversationStats = ({ conversations, isLoading }: ConversationStatsProps) => {
-  if (isLoading) {
+export const ConversationStats = ({ 
+  conversations, 
+  isLoading,
+  accountId,
+  status = "all",
+  inboxId,
+  teamId,
+  labels,
+  searchQuery
+}: ConversationStatsProps) => {
+  // Usar o hook para obter contagens diretamente da API
+  const { data: countsData, isLoading: isCountsLoading } = useChatwootConversationCounts({
+    account_id: accountId,
+    status: status,
+    inbox_id: inboxId,
+    team_id: teamId,
+    labels: labels,
+    q: searchQuery
+  });
+
+  // Usar isLoading do componente ou do hook de contagens
+  const loading = isLoading || isCountsLoading;
+
+  if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
@@ -27,11 +56,14 @@ export const ConversationStats = ({ conversations, isLoading }: ConversationStat
     )
   }
 
-  const totalConversations = conversations.length
-  const openConversations = conversations.filter(c => c.status === 'open').length
-  const pendingConversations = conversations.filter(c => c.status === 'pending').length
-  const resolvedConversations = conversations.filter(c => c.status === 'resolved').length
-  const unassignedConversations = conversations.filter(c => !c.assignee).length
+  // Usar contagens da API quando disponíveis, ou calcular localmente como fallback
+  const totalConversations = countsData?.all_count ?? conversations.length
+  const openConversations = status === "open" ? totalConversations : conversations.filter(c => c.status === 'open').length
+  const pendingConversations = status === "pending" ? totalConversations : conversations.filter(c => c.status === 'pending').length
+  const resolvedConversations = status === "resolved" ? totalConversations : conversations.filter(c => c.status === 'resolved').length
+  
+  // Estas contagens ainda são calculadas localmente pois não vêm diretamente da API
+  const unassignedConversations = countsData?.unassigned_count ?? conversations.filter(c => !c.assignee).length
   const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0)
 
   const stats = [

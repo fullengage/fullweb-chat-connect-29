@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ConversationCard } from "./ConversationCard"
+import { ConversationCardWithActions } from "./ConversationCardWithActions"
 import { ConversationDetail } from "./ConversationDetail"
 import { 
   MessageCircle, 
@@ -20,15 +21,20 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Users
+  Users,
+  ArrowRight,
+  Pause,
+  CheckCircle2
 } from "lucide-react"
-import { useConversations, useUsers, type User } from "@/hooks/useSupabaseData"
 import { Conversation } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 
 interface ConversationManagementProps {
-  accountId: number
-  selectedInboxId?: number
+  conversations: Conversation[]
+  agents: any[]
+  onAssignAgent: (conversationId: number, agentId: number | null) => Promise<void>
+  onStatusChange: (conversationId: number, newStatus: string) => Promise<void>
+  isLoading?: boolean
 }
 
 // Define Agent type to match what ConversationDetail expects
@@ -39,8 +45,11 @@ interface LocalAgent {
 }
 
 export const ConversationManagement = ({ 
-  accountId, 
-  selectedInboxId 
+  conversations = [],
+  agents = [],
+  onAssignAgent,
+  onStatusChange,
+  isLoading = false
 }: ConversationManagementProps) => {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
@@ -49,30 +58,11 @@ export const ConversationManagement = ({
   const [searchQuery, setSearchQuery] = useState("")
   const { toast } = useToast()
 
-  // Build filters object
-  const filters = {
-    account_id: accountId,
-    ...(statusFilter !== "all" && { status: statusFilter }),
-    ...(assigneeFilter !== "all" && assigneeFilter !== "unassigned" && { assignee_id: assigneeFilter }),
-  }
-
-  const {
-    data: conversations = [],
-    isLoading: conversationsLoading,
-    error: conversationsError,
-    refetch: refetchConversations
-  } = useConversations(filters)
-
-  const {
-    data: agents = [],
-    isLoading: agentsLoading
-  } = useUsers(accountId)
-
-  // Convert User[] to LocalAgent[] format expected by ConversationDetail
-  const agentsForFilter: LocalAgent[] = agents.map((user: User, index: number) => ({
-    id: index + 1, // Use index as number ID since ConversationDetail expects number
-    name: user.name,
-    email: user.email
+  // Convert agents to LocalAgent[] format expected by ConversationDetail
+  const agentsForFilter: LocalAgent[] = agents.map((agent: any) => ({
+    id: agent.id,
+    name: agent.name,
+    email: agent.email
   }))
 
   const handleConversationClick = (conversation: Conversation) => {
@@ -107,47 +97,6 @@ export const ConversationManagement = ({
 
   const getTabCount = (status: string) => {
     return conversationsByStatus[status as keyof typeof conversationsByStatus]?.length || 0
-  }
-
-  if (conversationsLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <MessageCircle className="h-5 w-5" />
-            <span>Gerenciar Conversas</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-100 rounded-lg animate-pulse" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (conversationsError) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <MessageCircle className="h-5 w-5" />
-            <span>Gerenciar Conversas</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <p className="text-red-600 mb-2">Erro ao carregar conversas</p>
-            <Button onClick={() => refetchConversations()} variant="outline">
-              Tentar Novamente
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    )
   }
 
   return (
@@ -187,10 +136,7 @@ export const ConversationManagement = ({
                 </SelectContent>
               </Select>
 
-              <Button onClick={() => refetchConversations()} variant="outline">
-                <Filter className="h-4 w-4 mr-2" />
-                Atualizar
-              </Button>
+              {/* Remover botão de atualizar pois não há mais refetch local */}
             </div>
           </div>
         </CardHeader>
@@ -198,103 +144,114 @@ export const ConversationManagement = ({
         <CardContent>
           <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="all" className="flex items-center space-x-2">
-                <MessageCircle className="h-4 w-4" />
-                <span>Todas</span>
-                <Badge variant="secondary" className="ml-1">
-                  {filteredConversations.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="open" className="flex items-center space-x-2">
-                <Clock className="h-4 w-4" />
-                <span>Abertas</span>
-                <Badge variant="secondary" className="ml-1">
-                  {getTabCount('open')}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="pending" className="flex items-center space-x-2">
-                <AlertCircle className="h-4 w-4" />
-                <span>Pendentes</span>
-                <Badge variant="secondary" className="ml-1">
-                  {getTabCount('pending')}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="resolved" className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4" />
-                <span>Resolvidas</span>
-                <Badge variant="secondary" className="ml-1">
-                  {getTabCount('resolved')}
-                </Badge>
-              </TabsTrigger>
+              <TabsTrigger value="all">Todas</TabsTrigger>
+              <TabsTrigger value="open">Abertas</TabsTrigger>
+              <TabsTrigger value="pending">Pendentes</TabsTrigger>
+              <TabsTrigger value="resolved">Resolvidas</TabsTrigger>
             </TabsList>
-
-            <TabsContent value="all" className="mt-4">
-              <ConversationList 
-                conversations={filteredConversations}
-                onConversationClick={handleConversationClick}
-              />
+            <TabsContent value="all">
+              <div className="space-y-3">
+                {filteredConversations.map((conversation) => (
+                  <ConversationCardWithActions
+                    key={conversation.id}
+                    conversation={conversation}
+                    agents={agents}
+                    onStatusChange={onStatusChange}
+                    onAssignAgent={onAssignAgent}
+                    onClick={() => handleConversationClick(conversation)}
+                    isLoading={isLoading}
+                  />
+                ))}
+                {filteredConversations.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhuma conversa encontrada</p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
-
-            <TabsContent value="open" className="mt-4">
-              <ConversationList 
-                conversations={conversationsByStatus.open}
-                onConversationClick={handleConversationClick}
-              />
+            <TabsContent value="open">
+              <div className="space-y-3">
+                {conversationsByStatus.open.map((conversation) => (
+                  <ConversationCardWithActions
+                    key={conversation.id}
+                    conversation={conversation}
+                    agents={agents}
+                    onStatusChange={onStatusChange}
+                    onAssignAgent={onAssignAgent}
+                    onClick={() => handleConversationClick(conversation)}
+                    isLoading={isLoading}
+                  />
+                ))}
+                {conversationsByStatus.open.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhuma conversa aberta</p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
-
-            <TabsContent value="pending" className="mt-4">
-              <ConversationList 
-                conversations={conversationsByStatus.pending}
-                onConversationClick={handleConversationClick}
-              />
+            <TabsContent value="pending">
+              <div className="space-y-3">
+                {conversationsByStatus.pending.map((conversation) => (
+                  <ConversationCardWithActions
+                    key={conversation.id}
+                    conversation={conversation}
+                    agents={agents}
+                    onStatusChange={onStatusChange}
+                    onAssignAgent={onAssignAgent}
+                    onClick={() => handleConversationClick(conversation)}
+                    isLoading={isLoading}
+                  />
+                ))}
+                {conversationsByStatus.pending.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Pause className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhuma conversa pendente</p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
-
-            <TabsContent value="resolved" className="mt-4">
-              <ConversationList 
-                conversations={conversationsByStatus.resolved}
-                onConversationClick={handleConversationClick}
-              />
+            <TabsContent value="resolved">
+              <div className="space-y-3">
+                {conversationsByStatus.resolved.map((conversation) => (
+                  <ConversationCardWithActions
+                    key={conversation.id}
+                    conversation={conversation}
+                    agents={agents}
+                    onStatusChange={onStatusChange}
+                    onAssignAgent={onAssignAgent}
+                    onClick={() => handleConversationClick(conversation)}
+                    isLoading={isLoading}
+                  />
+                ))}
+                {conversationsByStatus.resolved.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhuma conversa resolvida</p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
-
-      <ConversationDetail
-        conversation={selectedConversation}
-        agents={agentsForFilter}
-        isOpen={isDetailOpen}
-        onClose={handleCloseDetail}
-      />
-    </>
-  )
-}
-
-// Componente auxiliar para renderizar a lista de conversas
-const ConversationList = ({ 
-  conversations, 
-  onConversationClick 
-}: { 
-  conversations: Conversation[], 
-  onConversationClick: (conversation: Conversation) => void 
-}) => {
-  if (conversations.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500">Nenhuma conversa encontrada</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      {conversations.map((conversation) => (
-        <ConversationCard
-          key={conversation.id}
-          conversation={conversation}
-          onClick={() => onConversationClick(conversation)}
+      {selectedConversation && (
+        <ConversationDetail
+          conversation={selectedConversation}
+          agents={agentsForFilter}
+          isOpen={isDetailOpen}
+          onClose={handleCloseDetail}
+          accountId={selectedConversation?.account_id?.toString() || "1"}
+          onConversationUpdate={() => {
+            // Força uma atualização das conversas após envio de mensagem ou mudança de status
+            toast({
+              title: "Conversa atualizada",
+              description: "Recarregue a página para ver as últimas alterações",
+            })
+          }}
         />
-      ))}
-    </div>
+      )}
+    </>
   )
 }

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Edit, MoreHorizontal, Star, MessageCircle, Clock, CheckCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import type { AgentWithStats } from "@/hooks/useAgents";
+import type { AgentWithStats } from "@/hooks/useChatwootAgents";
 
 interface AgentCardProps {
   agent: AgentWithStats;

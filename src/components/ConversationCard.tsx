@@ -5,6 +5,7 @@ import { MessageCircle, Clock, User } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale/pt-BR"
 import { Conversation } from "@/types"
+import { useConversationLabels } from "@/hooks/useLabels"
 
 interface ConversationCardProps {
   conversation: Conversation
@@ -12,6 +13,9 @@ interface ConversationCardProps {
 }
 
 export const ConversationCard = ({ conversation, onClick }: ConversationCardProps) => {
+  // Buscar etiquetas da conversa (assumindo account_id = 1 por enquanto)
+  const { data: conversationLabels = [] } = useConversationLabels(conversation.id, conversation.account_id || 1)
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'open':
@@ -93,35 +97,56 @@ export const ConversationCard = ({ conversation, onClick }: ConversationCardProp
               
               <div className="flex items-center space-x-2 mt-1">
                 <span className="text-xs">{getChannelIcon(conversation.inbox.channel_type)}</span>
-                <span className="text-xs text-gray-500 truncate">
+                <span className="text-xs text-muted-foreground truncate">
                   {conversation.inbox.name}
                 </span>
               </div>
 
               {lastMessage && (
-                <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                <p className="text-sm text-foreground mt-2 line-clamp-2">
                   {lastMessage.content || 'Nenhum conteúdo da mensagem'}
                 </p>
               )}
 
-              <div className="flex items-center justify-between mt-3">
-                <div className="flex items-center space-x-2">
+              {/* Exibir etiquetas da conversa */}
+              {conversationLabels.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {conversationLabels.slice(0, 4).map((label) => (
+                    <Badge 
+                      key={`conversation-label-${label.id}`} 
+                      variant="outline" 
+                      className="text-xs px-2 py-0.5"
+                      style={{ 
+                        borderColor: label.color,
+                        color: label.color
+                      }}
+                    >
+                      {label.title}
+                    </Badge>
+                  ))}
+                  {conversationLabels.length > 4 && (
+                    <Badge key="conversation-label-more" variant="outline" className="text-xs px-2 py-0.5 text-gray-500">
+                      +{conversationLabels.length - 4}
+                    </Badge>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center space-x-1">
                   {conversation.assignee ? (
                     <div className="flex items-center space-x-1">
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={conversation.assignee.avatar_url} />
-                        <AvatarFallback className="text-xs">
-                          {conversation.assignee.name?.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs text-gray-500">
+                      <User className="h-3 w-3 text-green-600" />
+                      <span className="text-xs text-green-600 font-medium">
                         {conversation.assignee.name}
                       </span>
                     </div>
                   ) : (
                     <div className="flex items-center space-x-1">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <span className="text-xs text-gray-400">Não atribuído</span>
+                      <User className="h-3 w-3 text-gray-400" />
+                      <span className="text-xs text-gray-400">
+                        Livre
+                      </span>
                     </div>
                   )}
                 </div>
@@ -129,7 +154,14 @@ export const ConversationCard = ({ conversation, onClick }: ConversationCardProp
                 <div className="flex items-center space-x-1">
                   <Clock className="h-3 w-3 text-gray-400" />
                   <span className="text-xs text-gray-500">
-                    {formatDistanceToNow(new Date(conversation.updated_at), { addSuffix: true, locale: ptBR })}
+                    {conversation.updated_at ? (() => {
+                      const date = new Date(conversation.updated_at)
+                      // Se a data for inválida ou muito antiga (antes de 2000), usar data atual
+                      if (isNaN(date.getTime()) || date.getFullYear() < 2000) {
+                        return 'agora'
+                      }
+                      return formatDistanceToNow(date, { addSuffix: true, locale: ptBR })
+                    })() : 'agora'}
                   </span>
                 </div>
               </div>

@@ -5,34 +5,36 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { 
+import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { 
-  MessageCircle, 
-  Send, 
-  User, 
-  Clock, 
-  Tag, 
+import {
+  MessageCircle,
+  Send,
+  User,
+  Clock,
+  Tag,
   UserCheck,
   X,
   Phone,
-  Mail
+  Mail,
+  Loader2
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale/pt-BR"
 import { Conversation } from "@/types"
+import { useChatwootMessages } from "@/hooks/useChatwootConversationMessages"
 
 interface Agent {
   id: number
@@ -46,17 +48,23 @@ interface ConversationDetailProps {
   agents: Agent[]
   isOpen: boolean
   onClose: () => void
+  accountId?: string
+  onConversationUpdate?: () => void
 }
 
-export const ConversationDetail = ({ 
-  conversation, 
-  agents, 
-  isOpen, 
-  onClose 
+export const ConversationDetail = ({
+  conversation,
+  agents,
+  isOpen,
+  onClose,
+  accountId = "1",
+  onConversationUpdate
 }: ConversationDetailProps) => {
   const [newMessage, setNewMessage] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("")
   const [selectedAssignee, setSelectedAssignee] = useState("")
+
+  const { sendMessage, updateConversation, loading } = useChatwootMessages()
 
   if (!conversation) return null
 
@@ -86,24 +94,70 @@ export const ConversationDetail = ({
     }
   }
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return
-    
-    // Aqui seria implementada a lógica para enviar mensagem
-    console.log('Enviando mensagem:', newMessage)
-    setNewMessage("")
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || loading) return
+
+    try {
+      await sendMessage({
+        accountId,
+        conversationId: conversation.id,
+        content: newMessage.trim(),
+        messageType: 'outgoing'
+      })
+
+      setNewMessage("")
+
+      // Atualizar a conversa após enviar mensagem
+      if (onConversationUpdate) {
+        onConversationUpdate()
+      }
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error)
+    }
   }
 
-  const handleStatusChange = (newStatus: string) => {
-    setSelectedStatus(newStatus)
-    // Aqui seria implementada a lógica para alterar status
-    console.log('Alterando status para:', newStatus)
+  const handleStatusChange = async (newStatus: string) => {
+    if (loading || newStatus === conversation.status) return
+
+    try {
+      await updateConversation({
+        accountId,
+        conversationId: conversation.id,
+        status: newStatus
+      })
+
+      setSelectedStatus(newStatus)
+
+      // Atualizar a conversa após mudança de status
+      if (onConversationUpdate) {
+        onConversationUpdate()
+      }
+    } catch (error) {
+      console.error('Erro ao alterar status:', error)
+    }
   }
 
-  const handleAssigneeChange = (assigneeId: string) => {
-    setSelectedAssignee(assigneeId)
-    // Aqui seria implementada a lógica para alterar responsável
-    console.log('Alterando responsável para:', assigneeId)
+  const handleAssigneeChange = async (assigneeId: string) => {
+    if (loading) return
+
+    try {
+      const assigneeIdNumber = assigneeId === 'unassigned' ? null : parseInt(assigneeId)
+
+      await updateConversation({
+        accountId,
+        conversationId: conversation.id,
+        assigneeId: assigneeIdNumber
+      })
+
+      setSelectedAssignee(assigneeId)
+
+      // Atualizar a conversa após mudança de responsável
+      if (onConversationUpdate) {
+        onConversationUpdate()
+      }
+    } catch (error) {
+      console.error('Erro ao alterar responsável:', error)
+    }
   }
 
   return (
@@ -130,8 +184,7 @@ export const ConversationDetail = ({
             </Badge>
           </div>
         </SheetHeader>
-
-        <div className="flex flex-col h-full mt-6">
+        <div className="overflow-y-auto max-h-[calc(100vh-4rem)] pr-2 flex flex-col mt-6">
           {/* Informações do contato */}
           <Card className="mb-4">
             <CardHeader className="pb-3">
@@ -153,9 +206,9 @@ export const ConversationDetail = ({
               <div className="flex items-center space-x-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span>
-                  Criado {formatDistanceToNow(new Date(conversation.created_at), { 
-                    addSuffix: true, 
-                    locale: ptBR 
+                  Criado {formatDistanceToNow(new Date(conversation.created_at), {
+                    addSuffix: true,
+                    locale: ptBR
                   })}
                 </span>
               </div>
@@ -189,7 +242,7 @@ export const ConversationDetail = ({
                     <SelectValue placeholder="Selecionar responsável" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Não atribuído</SelectItem>
+                    <SelectItem value="unassigned">Não atribuído</SelectItem>
                     {agents.map((agent) => (
                       <SelectItem key={agent.id} value={agent.id.toString()}>
                         {agent.name}
@@ -232,9 +285,9 @@ export const ConversationDetail = ({
                             {message.sender_type === 'contact' ? conversation.contact?.name || 'Contato' : 'Agente'}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {message.created_at && formatDistanceToNow(new Date(message.created_at), { 
-                              addSuffix: true, 
-                              locale: ptBR 
+                            {message.created_at && formatDistanceToNow(new Date(message.created_at), {
+                              addSuffix: true,
+                              locale: ptBR
                             })}
                           </span>
                         </div>
@@ -254,15 +307,25 @@ export const ConversationDetail = ({
               {/* Campo de nova mensagem */}
               <div className="space-y-3">
                 <Textarea
-                  placeholder="Digite sua mensagem..."
+                  placeholder="Digite sua mensagem... (Ctrl+Enter para enviar)"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.ctrlKey) {
+                      e.preventDefault()
+                      handleSendMessage()
+                    }
+                  }}
                   rows={3}
                 />
                 <div className="flex justify-end">
-                  <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                    <Send className="h-4 w-4 mr-2" />
-                    Enviar
+                  <Button onClick={handleSendMessage} disabled={!newMessage.trim() || loading}>
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-2" />
+                    )}
+                    {loading ? 'Enviando...' : 'Enviar'}
                   </Button>
                 </div>
               </div>

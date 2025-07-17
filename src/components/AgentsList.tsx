@@ -1,7 +1,7 @@
 
 import { AgentCard } from "./AgentCard";
 import { Button } from "@/components/ui/button";
-import type { AgentWithStats } from "@/hooks/useAgents";
+import type { AgentWithStats } from "@/hooks/useChatwootAgents";
 
 interface AgentsListProps {
   searchTerm: string;

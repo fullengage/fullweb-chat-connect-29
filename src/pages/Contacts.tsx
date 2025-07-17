@@ -3,24 +3,70 @@ import { useState } from "react";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Input } from "@/components/ui/input";
-import { Users, Search } from "lucide-react";
+import { Users, Search, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ContactStats } from "@/components/ContactStats";
 import { ContactsList } from "@/components/ContactsList";
 import { NewContactDialog } from "@/components/NewContactDialog";
+import { useChatwootContacts, useCreateChatwootContact } from "@/hooks/useChatwootContacts";
+import { useToast } from "@/hooks/use-toast";
 
 const Contacts = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [contacts, setContacts] = useState<any[]>([]);
-  const [updateTrigger, setUpdateTrigger] = useState(0);
+  const [accountId] = useState("1");
+  const { toast } = useToast();
 
-  const handleContactAdded = (newContact: any) => {
-    setContacts(prev => [newContact, ...prev]);
-    setUpdateTrigger(prev => prev + 1);
+  // Usar o hook do proxy do Chatwoot
+  const { data: contacts = [], loading: contactsLoading, error: contactsError, refresh } = useChatwootContacts(accountId);
+  const createContactMutation = useCreateChatwootContact();
+
+  const handleContactAdded = async (newContactData: any) => {
+    try {
+      await createContactMutation.mutateAsync({
+        ...newContactData,
+        account_id: accountId
+      });
+      
+      // Atualizar a lista após criar contato
+      refresh();
+    } catch (error) {
+      console.error('Error creating contact:', error);
+    }
   };
 
   const handleContactUpdate = () => {
-    setUpdateTrigger(prev => prev + 1);
+    refresh();
   };
+
+  const handleRefresh = () => {
+    refresh();
+    toast({
+      title: "Atualizando dados",
+      description: "Buscando os contatos mais recentes...",
+    });
+  };
+
+  if (contactsError) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <AppSidebar />
+          <SidebarInset>
+            <div className="flex-1 p-6">
+              <div className="text-center">
+                <h2 className="text-lg font-semibold text-red-600 mb-2">Erro ao carregar contatos</h2>
+                <p className="text-gray-600">Não foi possível carregar os dados dos contatos.</p>
+                <Button onClick={handleRefresh} className="mt-4">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Tentar novamente
+                </Button>
+              </div>
+            </div>
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -42,7 +88,13 @@ const Contacts = () => {
                   </div>
                 </div>
               </div>
-              <NewContactDialog onContactAdded={handleContactAdded} />
+              <div className="flex items-center space-x-3">
+                <Button onClick={handleRefresh} disabled={contactsLoading} variant="outline">
+                  <RefreshCw className={`h-4 w-4 mr-2 ${contactsLoading ? 'animate-spin' : ''}`} />
+                  Atualizar
+                </Button>
+                <NewContactDialog onContactAdded={handleContactAdded} />
+              </div>
             </div>
 
             {/* Stats Cards */}
@@ -65,8 +117,9 @@ const Contacts = () => {
             <ContactsList 
               searchTerm={searchTerm} 
               tagFilter="all"
-              contacts={contacts.length > 0 ? contacts : undefined}
+              contacts={contacts}
               onContactUpdate={handleContactUpdate}
+              isLoading={contactsLoading}
             />
           </div>
         </SidebarInset>

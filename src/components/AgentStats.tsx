@@ -1,7 +1,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, CheckCircle, Clock, Star } from "lucide-react";
-import type { AgentWithStats } from "@/hooks/useAgents";
+import type { AgentWithStats } from "@/hooks/useChatwootAgents";
 
 interface AgentStatsProps {
   agents: AgentWithStats[];

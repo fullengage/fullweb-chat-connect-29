@@ -10,7 +10,7 @@ import { AgentsList } from "@/components/AgentsList";
 import { NewAgentDialog } from "@/components/NewAgentDialog";
 import { AgentDetailsDialog } from "@/components/AgentDetailsDialog";
 import { useToast } from "@/hooks/use-toast";
-import { useAgents, useUpdateAgent, useCreateAgent, type AgentWithStats } from "@/hooks/useAgents";
+import { useChatwootAgents, useUpdateChatwootAgent, useCreateChatwootAgent, type AgentWithStats } from "@/hooks/useChatwootAgents";
 
 const Agents = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -20,10 +20,10 @@ const Agents = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const { toast } = useToast();
 
-  // Use real data from Supabase
-  const { data: agents = [], isLoading, error } = useAgents();
-  const updateAgentMutation = useUpdateAgent();
-  const createAgentMutation = useCreateAgent();
+  // Use real data from Chatwoot proxy
+  const { data: agents = [], isLoading, error } = useChatwootAgents("1");
+  const updateAgentMutation = useUpdateChatwootAgent();
+  const createAgentMutation = useCreateChatwootAgent();
 
   const handleNewAgent = async (newAgentData: any) => {
     try {
@@ -106,7 +106,7 @@ const Agents = () => {
       acc[agent.role] = (acc[agent.role] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    
+
     return {
       all: agents.length,
       agent: counts.agent || 0,
@@ -191,7 +191,7 @@ const Agents = () => {
                   </Button>
                 )}
               </div>
-              
+
               <Select value={roleFilter} onValueChange={setRoleFilter}>
                 <SelectTrigger className="w-64">
                   <Filter className="h-4 w-4 mr-2" />
@@ -221,7 +221,7 @@ const Agents = () => {
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   <span className="text-sm text-blue-700">
                     {agents.filter(agent => {
-                      const matchesSearch = 
+                      const matchesSearch =
                         agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         agent.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         (agent.phone && agent.phone.includes(searchTerm));
@@ -230,8 +230,8 @@ const Agents = () => {
                     }).length} agente(s) encontrado(s)
                   </span>
                 </div>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => {
                     setSearchTerm("");
@@ -245,8 +245,8 @@ const Agents = () => {
             )}
 
             {/* Agents List */}
-            <AgentsList 
-              searchTerm={searchTerm} 
+            <AgentsList
+              searchTerm={searchTerm}
               roleFilter={roleFilter}
               agents={agents}
               onAgentClick={handleAgentClick}

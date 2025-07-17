@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import {
   DndContext,
@@ -16,15 +15,27 @@ import {
 } from "@dnd-kit/sortable"
 import { KanbanColumn } from "./KanbanColumn"
 import { KanbanCard } from "./KanbanCard"
+import { ConversationDetailsDrawer } from "./ConversationDetailsDrawer"
 import { Clock, AlertCircle, CheckCircle, Users } from "lucide-react"
-import { ConversationForStats } from "@/types"
 import { useToast } from "@/hooks/use-toast"
+import { useConversationActions } from "@/hooks/useConversationActions"
+import { Conversation } from "@/types"
+
+interface Agent {
+  id: number
+  name: string
+  email: string
+  avatar_url?: string
+}
 
 interface KanbanBoardProps {
-  conversations: ConversationForStats[]
-  onConversationClick: (conversation: ConversationForStats) => void
-  onStatusChange?: (conversationId: number, newStatus: string) => void
+  conversations: Conversation[]
+  onConversationClick: (conversation: Conversation) => void
+  onStatusChange?: (conversationId: number, newStatus: string) => Promise<void>
+  onAssignAgent?: (conversationId: number, agentId: number | null) => Promise<void>
+  agents?: Agent[]
   isLoading?: boolean
+  accountId?: string
 }
 
 const statusColumns = [
@@ -70,11 +81,18 @@ export const KanbanBoard = ({
   conversations, 
   onConversationClick, 
   onStatusChange,
-  isLoading 
+  onAssignAgent,
+  agents = [],
+  isLoading,
+  accountId = "1"
 }: KanbanBoardProps) => {
-  const [activeConversation, setActiveConversation] = useState<ConversationForStats | null>(null)
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const { toast } = useToast()
+  
+  // ✅ ARQUITETURA CORRETA: Hook dedicado para ações de conversa
+  const conversationActions = useConversationActions()
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -84,13 +102,71 @@ export const KanbanBoard = ({
     })
   )
 
-  // Organizar conversas por status
-  const conversationsByStatus = {
-    open: conversations.filter(c => c.status === 'open' && c.assignee),
-    pending: conversations.filter(c => c.status === 'pending' && c.assignee),
-    resolved: conversations.filter(c => c.status === 'resolved' && c.assignee),
-    unassigned: conversations.filter(c => !c.assignee)
+  // Debug: Log das conversas recebidas
+  console.log('🔍 KanbanBoard - Conversas recebidas:', conversations)
+  console.log('🔍 KanbanBoard - Total de conversas:', conversations.length)
+  console.log('🔍 KanbanBoard - Primeira conversa:', conversations[0])
+  console.log('🔍 KanbanBoard - AccountId:', accountId)
+
+  // Organizar conversas por status - Lógica baseada nos dados reais
+  console.log('🔍 KanbanBoard - Analisando estrutura dos dados:')
+  if (conversations.length > 0) {
+    const firstConv = conversations[0]
+    console.log('🔍 Primeira conversa:', {
+      id: firstConv.id,
+      status: firstConv.status,
+      assignee_id: firstConv.assignee_id,
+      assignee: firstConv.assignee,
+      contact_name: firstConv.contact?.name
+    })
   }
+  
+  // Organizar conversas SEM DUPLICIDADE - cada conversa aparece apenas em uma coluna
+  const conversationsByStatus = {
+    // Conversas não atribuídas (prioridade máxima - aparecem aqui independente do status)
+    unassigned: conversations.filter(c => {
+      const hasAssigneeId = c.assignee_id && c.assignee_id !== '' && c.assignee_id !== '0' && c.assignee_id !== 0 && c.assignee_id !== 'undefined' && c.assignee_id !== 'null'
+      const hasAssigneeObj = c.assignee && c.assignee.id && c.assignee.id !== '' && c.assignee.id !== '0'
+      const hasNoAssignee = !hasAssigneeId && !hasAssigneeObj
+      console.log(`Conversa ${c.id}: unassigned=${hasNoAssignee}, assignee_id="${c.assignee_id}"`)
+      return hasNoAssignee
+    }),
+    
+    // Conversas atribuídas organizadas por status
+    open: conversations.filter(c => {
+      const hasAssigneeId = c.assignee_id && c.assignee_id !== '' && c.assignee_id !== '0' && c.assignee_id !== 0 && c.assignee_id !== 'undefined' && c.assignee_id !== 'null'
+      const hasAssigneeObj = c.assignee && c.assignee.id && c.assignee.id !== '' && c.assignee.id !== '0'
+      const hasAssignee = hasAssigneeId || hasAssigneeObj
+      const isOpen = c.status === 'open'
+      console.log(`Conversa ${c.id}: open=${isOpen && hasAssignee}, status="${c.status}", hasAssignee=${hasAssignee}`)
+      return isOpen && hasAssignee
+    }),
+    
+    pending: conversations.filter(c => {
+      const hasAssigneeId = c.assignee_id && c.assignee_id !== '' && c.assignee_id !== '0' && c.assignee_id !== 0 && c.assignee_id !== 'undefined' && c.assignee_id !== 'null'
+      const hasAssigneeObj = c.assignee && c.assignee.id && c.assignee.id !== '' && c.assignee.id !== '0'
+      const hasAssignee = hasAssigneeId || hasAssigneeObj
+      const isPending = c.status === 'pending'
+      console.log(`Conversa ${c.id}: pending=${isPending && hasAssignee}, status="${c.status}", hasAssignee=${hasAssignee}`)
+      return isPending && hasAssignee
+    }),
+    
+    resolved: conversations.filter(c => {
+      const hasAssigneeId = c.assignee_id && c.assignee_id !== '' && c.assignee_id !== '0' && c.assignee_id !== 0 && c.assignee_id !== 'undefined' && c.assignee_id !== 'null'
+      const hasAssigneeObj = c.assignee && c.assignee.id && c.assignee.id !== '' && c.assignee.id !== '0'
+      const hasAssignee = hasAssigneeId || hasAssigneeObj
+      const isResolved = c.status === 'resolved'
+      console.log(`Conversa ${c.id}: resolved=${isResolved && hasAssignee}, status="${c.status}", hasAssignee=${hasAssignee}`)
+      return isResolved && hasAssignee
+    })
+  }
+
+  // Debug: Log da organização por status
+  console.log('🔍 KanbanBoard - Conversas por status:', conversationsByStatus)
+  console.log('🔍 KanbanBoard - Abertas:', conversationsByStatus.open.length)
+  console.log('🔍 KanbanBoard - Pendentes:', conversationsByStatus.pending.length)
+  console.log('🔍 KanbanBoard - Resolvidas:', conversationsByStatus.resolved.length)
+  console.log('🔍 KanbanBoard - Não atribuídas:', conversationsByStatus.unassigned.length)
 
   const handleDragStart = (event: DragStartEvent) => {
     setIsDragging(true)
@@ -98,7 +174,7 @@ export const KanbanBoard = ({
     setActiveConversation(conversation || null)
   }
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     setIsDragging(false)
     setActiveConversation(null)
     
@@ -142,28 +218,41 @@ export const KanbanBoard = ({
       return
     }
 
-    // Se a conversa não tem assignee e não está indo para unassigned
-    if (!conversation.assignee && newColumnId !== 'unassigned') {
-      toast({
-        title: "Conversa não atribuída",
-        description: "Atribua a conversa a um agente antes de alterar o status.",
-        variant: "destructive",
-      })
-      return
-    }
+    // Permitir mover conversas não atribuídas (removido bloqueio)
+    // Conversas podem ser movidas independente de ter assignee
 
-    // Executar a mudança
-    if (onStatusChange) {
-      console.log(`Moving conversation ${conversationId} from ${conversation.status} to ${newStatus}`)
-      onStatusChange(conversationId, newStatus)
-      
-      toast({
-        title: "Status atualizado",
-        description: `Conversa movida para ${targetColumn.title}`,
-        variant: "default",
+    // ✅ ARQUITETURA CORRETA: Usar hook de ações de conversa
+    try {
+      console.log(`🔄 Movendo conversa ${conversationId} de ${conversation.status} para ${newStatus}`)
+      await conversationActions.updateStatus({
+        conversationId,
+        status: newStatus as 'open' | 'pending' | 'resolved',
+        accountId
       })
+      
+      // Toast já é mostrado pelo hook
+    } catch (error) {
+      console.error('❌ Erro ao mover conversa:', error)
+      // Toast de erro já é mostrado pelo hook
     }
   }
+
+  // Converter Conversation para ConversationForStats para compatibilidade com KanbanCard
+  const convertToConversationForStats = (conv: Conversation) => ({
+    id: conv.id,
+    status: conv.status,
+    unread_count: conv.unread_count || 0,
+    contact: conv.contact || { id: 0, name: 'Contato Desconhecido' },
+    assignee: conv.assignee ? {
+      id: conv.assignee.id, // Já é string no tipo Conversation
+      name: conv.assignee.name,
+      avatar_url: conv.assignee.avatar_url
+    } : undefined,
+    inbox: conv.inbox,
+    updated_at: conv.updated_at,
+    messages: conv.messages || [],
+    account_id: conv.account_id || parseInt(accountId) // Adicionar account_id para as etiquetas
+  })
 
   if (isLoading) {
     return (
@@ -213,8 +302,8 @@ export const KanbanBoard = ({
                     <KanbanCard
                       key={conversation.id}
                       id={conversation.id.toString()}
-                      conversation={conversation}
-                      onClick={() => onConversationClick(conversation)}
+                      conversation={convertToConversationForStats(conversation)}
+                      onClick={() => setSelectedConversation(conversation)}
                       isDragging={activeConversation?.id === conversation.id && isDragging}
                     />
                   ))}
@@ -236,12 +325,23 @@ export const KanbanBoard = ({
           <div className="rotate-2 opacity-90 transform scale-105 shadow-lg">
             <KanbanCard
               id={activeConversation.id.toString()}
-              conversation={activeConversation}
+              conversation={convertToConversationForStats(activeConversation)}
               isDragging
             />
           </div>
         )}
       </DragOverlay>
+
+      {/* Drawer de Detalhes da Conversa */}
+      <ConversationDetailsDrawer
+        conversation={selectedConversation}
+        isOpen={!!selectedConversation}
+        onClose={() => setSelectedConversation(null)}
+        agents={agents}
+        accountId={accountId}
+        // ✅ ARQUITETURA CORRETA: Usar hook de ações em vez de props
+        conversationActions={conversationActions}
+      />
     </DndContext>
   )
 }

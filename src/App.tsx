@@ -15,6 +15,9 @@ import Teams from "@/pages/Teams";
 import AgentBots from "@/pages/AgentBots";
 import Accounts from "@/pages/Accounts";
 import "./App.css";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Sun, Moon } from "lucide-react";
 
 const queryClient = new QueryClient();
 
@@ -129,11 +132,42 @@ function AppRoutes() {
   );
 }
 
+function DarkModeToggle() {
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains("dark")
+  );
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [isDark]);
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={isDark ? "Alternar para modo claro" : "Alternar para modo escuro"}
+      className="fixed top-4 right-4 z-50"
+      onClick={() => setIsDark((v) => !v)}
+    >
+      {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+    </Button>
+  );
+}
+
+// Remover o DarkModeToggle e garantir dark sempre ativo
 function App() {
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>
+          <DarkModeToggle />
           <AppRoutes />
           <Toaster />
         </BrowserRouter>

@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "API Documentation Sync",
+  "description": "Automatically updates or generates documentation in docs/apis folder whenever files in src/services or src/api directories are modified, ensuring API documentation stays current with code changes",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/services/**/*",
+      "src/api/**/*"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A file has been modified in the services or API layer. Please analyze the changed file and update or create corresponding documentation in the docs/apis folder. The documentation should include:\n\n1. A summary of the service/API functionality\n2. Available endpoints and methods\n3. Request/response schemas\n4. Example usage code\n5. Any authentication requirements\n6. Error handling information\n\nFocus on making the documentation clear and practical for developers who need to understand and use these APIs. If this is a new file, create new documentation. If it's an existing file, update the relevant documentation to reflect the changes."
+  }
+}

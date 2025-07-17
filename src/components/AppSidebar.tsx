@@ -15,11 +15,6 @@ import { Link, useLocation } from "react-router-dom";
 
 const menuItems = [
   {
-    title: "Início",
-    url: "/",
-    icon: Home,
-  },
-  {
     title: "Dashboard",
     url: "/dashboard",
     icon: BarChart3,
@@ -30,18 +25,8 @@ const menuItems = [
     icon: MessageCircle,
   },
   {
-    title: "Conversas",
-    url: "/conversations",
-    icon: MessageSquare,
-  },
-  {
-    title: "Análises Avançadas",
-    url: "/analytics",
-    icon: TrendingUp,
-  },
-  {
-    title: "Emails",
-    url: "/email",
+    title: "Campanhas",
+    url: "/campaigns",
     icon: Mail,
   },
   {
@@ -64,6 +49,11 @@ const menuItems = [
     url: "/agent-bots",
     icon: Bot,
   },
+  {
+    title: "Análises Avançadas",
+    url: "/analytics",
+    icon: TrendingUp,
+  },
 ];
 
 export function AppSidebar() {
@@ -73,19 +63,19 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center space-x-2 px-4 py-2">
-          <div className="p-2 bg-purple-600 rounded-lg">
+          <div className="p-2 bg-primary rounded-lg">
             <Bot className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">CRM Hub</h2>
-            <p className="text-xs text-gray-600">Gestão Inteligente</p>
+            <h2 className="text-lg font-bold text-sidebar-foreground">CRM Hub</h2>
+            <p className="text-xs text-muted-foreground">Gestão Inteligente</p>
           </div>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navegação Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs text-muted-foreground font-semibold uppercase tracking-wider px-4 pt-2 pb-1">Navegação Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -93,8 +83,12 @@ export function AppSidebar() {
                   <SidebarMenuButton 
                     asChild 
                     isActive={location.pathname === item.url}
+                    className={location.pathname === item.url
+                      ? "bg-primary/20 text-primary hover:bg-primary/30"
+                      : "hover:bg-accent hover:text-accent-foreground transition-colors"
+                    }
                   >
-                    <Link to={item.url}>
+                    <Link to={item.url} className="flex items-center gap-2 px-3 py-2 rounded-lg">
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -107,8 +101,8 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="px-4 py-2 border-t">
-          <p className="text-xs text-gray-500">
+        <div className="px-4 py-2 border-t border-border">
+          <p className="text-xs text-muted-foreground">
             © 2025 CRM Hub - Powered by AI
           </p>
         </div>

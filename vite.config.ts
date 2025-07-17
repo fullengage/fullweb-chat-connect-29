@@ -7,7 +7,21 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
+    port: 8081,
+    proxy: {
+      '/api/chatwoot-proxy.php': {
+        target: 'https://api.chathook.com.br',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            // Adicionar headers necessários
+            proxyReq.setHeader('Origin', 'https://chathook.com.br');
+            proxyReq.setHeader('Referer', 'https://chathook.com.br');
+          });
+        }
+      },
+    },
   },
   plugins: [
     react(),

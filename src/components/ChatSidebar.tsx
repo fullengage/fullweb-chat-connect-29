@@ -22,12 +22,12 @@ export const ChatSidebar = ({
   isLoading
 }: ChatSidebarProps) => {
   return (
-    <div className="w-80 border-r bg-white flex flex-col">
+    <div className="w-80 border-r bg-card flex flex-col">
       {/* Header */}
       <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold mb-3">Conversas</h2>
+        <h2 className="text-lg font-semibold mb-3 text-card-foreground">Conversas</h2>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar conversas..."
             value={searchTerm}

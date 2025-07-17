@@ -8,6 +8,7 @@ import { Clock, User, GripVertical, AlertCircle, CheckCircle2 } from "lucide-rea
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale/pt-BR"
 import { ConversationForStats } from "@/types"
+import { useConversationLabels } from "@/hooks/useLabels"
 
 interface KanbanCardProps {
   id: string
@@ -65,6 +66,9 @@ export const KanbanCard = ({ id, conversation, onClick, isDragging }: KanbanCard
 
   const lastMessage = conversation.messages?.[conversation.messages.length - 1]
 
+  // Buscar etiquetas da conversa
+  const { data: conversationLabels = [] } = useConversationLabels(conversation.id, conversation.account_id || 1)
+
   return (
     <Card
       ref={setNodeRef}
@@ -116,9 +120,34 @@ export const KanbanCard = ({ id, conversation, onClick, isDragging }: KanbanCard
 
         {lastMessage && (
           <div className="mb-3">
-            <p className="text-xs text-gray-600 line-clamp-2 bg-gray-50 p-2 rounded">
+            <p className="text-xs text-foreground line-clamp-2 bg-transparent p-0 rounded">
               {lastMessage.content || 'Nenhum conteúdo da mensagem'}
             </p>
+          </div>
+        )}
+
+        {/* Exibir etiquetas da conversa */}
+        {conversationLabels.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {conversationLabels.slice(0, 3).map((label) => (
+              <Badge 
+                key={`kanban-label-${label.id}`} 
+                variant="outline" 
+                className="text-xs px-1.5 py-0.5 h-5"
+                style={{ 
+                  borderColor: label.color,
+                  color: label.color,
+                  fontSize: '10px'
+                }}
+              >
+                {label.title}
+              </Badge>
+            ))}
+            {conversationLabels.length > 3 && (
+              <Badge variant="outline" className="text-xs px-1.5 py-0.5 h-5 text-gray-500">
+                +{conversationLabels.length - 3}
+              </Badge>
+            )}
           </div>
         )}
 
@@ -147,7 +176,14 @@ export const KanbanCard = ({ id, conversation, onClick, isDragging }: KanbanCard
           <div className="flex items-center space-x-1">
             <Clock className="h-3 w-3 text-gray-400" />
             <span className="text-xs text-gray-500">
-              {formatDistanceToNow(new Date(conversation.updated_at), { addSuffix: true, locale: ptBR })}
+              {conversation.updated_at ? (() => {
+                const date = new Date(conversation.updated_at)
+                // Se a data for inválida ou muito antiga (antes de 2000), usar data atual
+                if (isNaN(date.getTime()) || date.getFullYear() < 2000) {
+                  return 'agora'
+                }
+                return formatDistanceToNow(date, { addSuffix: true, locale: ptBR })
+              })() : 'agora'}
             </span>
           </div>
         </div>

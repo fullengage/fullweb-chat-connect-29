@@ -20,7 +20,7 @@ import {
   Calendar,
   Edit2
 } from "lucide-react";
-import type { AgentWithStats } from "@/hooks/useAgents";
+import type { AgentWithStats } from "@/hooks/useChatwootAgents";
 
 interface AgentDetailsDialogProps {
   agent: AgentWithStats | null;

@@ -4,8 +4,7 @@ import { AppSidebar } from "@/components/AppSidebar"
 import { ConversationStats } from "@/components/ConversationStats"
 import { ConversationManagement } from "@/components/ConversationManagement"
 import { ConversationsWithMessagesTable } from "@/components/ConversationsWithMessagesTable"
-import { useConversations, useUsers, useInboxes } from "@/hooks/useSupabaseData"
-import { useConversationsWithMessages } from "@/hooks/useConversationsWithMessages"
+import { useUsers } from "@/hooks/useUsers"
 import { Conversation, ConversationForStats } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -14,6 +13,7 @@ import { RefreshCw, MessageSquare, Settings, Search } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 import { supabase } from "@/integrations/supabase/client"
+import { LabelsTest } from "@/components/LabelsTest"
 
 export default function Conversations() {
   const [accountId, setAccountId] = useState("")
@@ -282,6 +282,9 @@ export default function Conversations() {
 
             {accountIdNumber > 0 ? (
               <div className="space-y-6">
+                {/* Teste do sistema de labels */}
+                <LabelsTest />
+                
                 <ConversationStats
                   conversations={conversationsForStats}
                   isLoading={conversationsLoading}

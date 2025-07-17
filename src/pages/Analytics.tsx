@@ -145,11 +145,15 @@ export default function Analytics() {
                 </TabsTrigger>
               </TabsList>
 
+              // Dentro do componente Analytics, onde o ConversationAnalytics é usado
               <TabsContent value="conversations" className="space-y-6 mt-6">
                 <ConversationAnalytics
                   conversations={filteredConversations}
                   isLoading={conversationsLoading}
                   inboxes={inboxes}
+                  accountId={accountId}
+                  status={status}
+                  inboxId={inboxId}
                 />
               </TabsContent>
 

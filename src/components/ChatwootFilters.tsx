@@ -53,9 +53,9 @@ export const ChatwootFilters = ({
   const activeFiltersCount = [status, assigneeId, inboxId].filter(f => f && f !== 'all').length
 
   return (
-    <div className="space-y-4 p-4 bg-white rounded-lg border">
+    <div className="space-y-4 p-4 bg-card rounded-lg border border-card">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Filtros</h3>
+        <h3 className="text-lg font-semibold text-card-foreground">Filtros</h3>
         {activeFiltersCount > 0 && (
           <div className="flex items-center space-x-2">
             <Badge variant="secondary">{activeFiltersCount} ativos</Badge>
@@ -74,7 +74,7 @@ export const ChatwootFilters = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium">ID da Conta</label>
+          <label className="text-sm font-medium text-muted-foreground">ID da Conta</label>
           <Input
             placeholder="Digite o ID da conta"
             value={accountId}
@@ -85,7 +85,7 @@ export const ChatwootFilters = ({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Status</label>
+          <label className="text-sm font-medium text-muted-foreground">Status</label>
           <Select value={status || 'all'} onValueChange={onStatusChange}>
             <SelectTrigger className="h-9">
               <SelectValue placeholder="Selecione o status" />
@@ -100,7 +100,7 @@ export const ChatwootFilters = ({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Atendente</label>
+          <label className="text-sm font-medium text-muted-foreground">Atendente</label>
           <Select value={assigneeId || 'all'} onValueChange={onAssigneeChange} disabled={isLoading}>
             <SelectTrigger className="h-9">
               <SelectValue placeholder="Selecione o atendente" />
@@ -118,7 +118,7 @@ export const ChatwootFilters = ({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Canal</label>
+          <label className="text-sm font-medium text-muted-foreground">Canal</label>
           <Select value={inboxId || 'all'} onValueChange={onInboxChange} disabled={isLoading}>
             <SelectTrigger className="h-9">
               <SelectValue placeholder="Selecione o canal" />

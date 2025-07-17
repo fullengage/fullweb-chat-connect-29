@@ -27,11 +27,10 @@ export const KanbanColumn = ({
   })
 
   return (
-    <Card 
+    <Card
       ref={setNodeRef}
-      className={`${bgColor} ${borderColor} border-2 transition-all duration-200 ${
-        isOver ? 'ring-2 ring-blue-400 shadow-lg border-blue-300 scale-105' : ''
-      }`}
+      className={`${bgColor} ${borderColor} border-2 transition-all duration-200 ${isOver ? 'ring-2 ring-blue-400 shadow-lg border-blue-300 scale-105' : ''
+        }`}
     >
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-sm font-medium">
