@@ -94,14 +94,6 @@ export function useChatwootAgents(accountId: string = "1") {
     },
     enabled: !!accountId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    onError: (error: any) => {
-      console.error('Erro ao buscar agentes:', error);
-      toast({
-        title: "Erro ao carregar agentes",
-        description: "Não foi possível carregar os dados dos agentes.",
-        variant: "destructive",
-      });
-    }
   });
 }
 

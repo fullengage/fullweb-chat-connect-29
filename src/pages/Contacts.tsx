@@ -117,9 +117,14 @@ const Contacts = () => {
             <ContactsList 
               searchTerm={searchTerm} 
               tagFilter="all"
-              contacts={contacts}
+              contacts={contacts.map(c => ({
+                id: c.id.toString(),
+                name: c.name,
+                email: c.email,
+                phone: c.phone,
+                created_at: c.created_at
+              }))}
               onContactUpdate={handleContactUpdate}
-              isLoading={contactsLoading}
             />
           </div>
         </SidebarInset>

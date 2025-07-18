@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { EditContactDialog } from "./EditContactDialog";
 
 interface Contact {
-  id: number;
+  id: string;
   name?: string;
   email?: string;
   phone?: string;
@@ -88,7 +88,7 @@ export const ContactsList = ({
 
   const handleContactUpdated = (updatedContact: ContactForCard) => {
     const updatedContactData = {
-      id: parseInt(updatedContact.id),
+      id: updatedContact.id,
       name: updatedContact.name,
       email: updatedContact.email,
       phone: updatedContact.phone,
@@ -97,7 +97,7 @@ export const ContactsList = ({
 
     setLocalContacts(prev => 
       prev.map(contact => 
-        contact.id === parseInt(updatedContact.id) 
+        contact.id === updatedContact.id 
           ? updatedContactData
           : contact
       )
@@ -110,7 +110,7 @@ export const ContactsList = ({
 
   const handleDeleteContact = (contactId: string) => {
     setLocalContacts(prev => 
-      prev.filter(contact => contact.id !== parseInt(contactId))
+      prev.filter(contact => contact.id !== contactId)
     );
 
     if (onContactUpdate) {
@@ -183,7 +183,7 @@ export const ContactsList = ({
             'Data não disponível';
 
           const contactForCard: ContactForCard = {
-            id: contact.id.toString(),
+            id: contact.id,
             initials,
             name: contact.name || 'Nome não informado',
             email: contact.email || 'Email não informado',

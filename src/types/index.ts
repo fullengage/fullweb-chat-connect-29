@@ -8,6 +8,11 @@ export interface ConversationForStats {
   id: number
   status: string
   unread_count: number // Made required to match usage
+  account_id: number
+  contact_id: number
+  kanban_stage: string
+  last_activity_at: string
+  created_at: string
   contact: {
     id: number
     name: string

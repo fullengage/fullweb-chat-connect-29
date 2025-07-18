@@ -51,17 +51,17 @@ export default function Analytics() {
     isLoading: conversationsLoading,
     error: conversationsError,
     refetch: refetchConversations
-  } = useConversations(filters)
+  } = useConversations()
 
   const {
     data: users = [],
     isLoading: usersLoading
-  } = useUsers(accountIdNumber)
+  } = useUsers()
 
   const {
     data: inboxes = [],
     isLoading: inboxesLoading
-  } = useInboxes(accountIdNumber)
+  } = useInboxes()
 
   const handleRefresh = () => {
     refetchConversations()
@@ -74,7 +74,7 @@ export default function Analytics() {
   // Filter conversations based on assignee
   const filteredConversations = conversations.filter(conversation => {
     if (assigneeId === "unassigned") {
-      return !conversation.assignee
+      return !conversation.assignee_id
     }
     return true
   })
@@ -117,7 +117,11 @@ export default function Analytics() {
               onInboxChange={setInboxId}
               onAccountIdChange={setAccountId}
               agents={agents}
-              inboxes={inboxes}
+                inboxes={inboxes.map(inbox => ({
+                  id: parseInt(inbox.id),
+                  name: inbox.name,
+                  channel_type: inbox.channel_type
+                }))}
               isLoading={usersLoading || inboxesLoading}
             />
 
@@ -145,21 +149,48 @@ export default function Analytics() {
                 </TabsTrigger>
               </TabsList>
 
-              // Dentro do componente Analytics, onde o ConversationAnalytics é usado
               <TabsContent value="conversations" className="space-y-6 mt-6">
                 <ConversationAnalytics
-                  conversations={filteredConversations}
+                  conversations={filteredConversations.map(conv => ({
+                    ...conv,
+                    priority: (conv.priority as 'high' | 'medium' | 'low') || 'medium',
+                    assignee: conv.assignee_id ? {
+                      id: conv.assignee_id,
+                      name: 'Agente',
+                      avatar_url: ''
+                    } : undefined,
+                    inbox: {
+                      id: conv.account_id,
+                      name: 'Inbox Principal',
+                      channel_type: 'webchat'
+                    }
+                  }))}
                   isLoading={conversationsLoading}
-                  inboxes={inboxes}
-                  accountId={accountId}
-                  status={status}
-                  inboxId={inboxId}
+                  inboxes={inboxes.map(inbox => ({
+                    id: parseInt(inbox.id),
+                    name: inbox.name,
+                    channel_type: inbox.channel_type
+                  }))}
+                  // Remove accountId prop as it's not needed
                 />
               </TabsContent>
 
               <TabsContent value="response-time" className="space-y-6 mt-6">
                 <ResponseTimeAnalytics
-                  conversations={filteredConversations}
+                  conversations={filteredConversations.map(conv => ({
+                    ...conv,
+                    priority: (conv.priority as 'high' | 'medium' | 'low') || 'medium',
+                    assignee: conv.assignee_id ? {
+                      id: conv.assignee_id,
+                      name: 'Agente',
+                      avatar_url: ''
+                    } : undefined,
+                    inbox: {
+                      id: conv.account_id,
+                      name: 'Inbox Principal',
+                      channel_type: 'webchat'
+                    }
+                  }))}
                   isLoading={conversationsLoading}
                   agents={users}
                 />
@@ -167,7 +198,20 @@ export default function Analytics() {
 
               <TabsContent value="agent-performance" className="space-y-6 mt-6">
                 <AgentPerformanceAnalytics
-                  conversations={filteredConversations}
+                  conversations={filteredConversations.map(conv => ({
+                    ...conv,
+                    priority: (conv.priority as 'high' | 'medium' | 'low') || 'medium',
+                    assignee: conv.assignee_id ? {
+                      id: conv.assignee_id,
+                      name: 'Agente',
+                      avatar_url: ''
+                    } : undefined,
+                    inbox: {
+                      id: conv.account_id,
+                      name: 'Inbox Principal',
+                      channel_type: 'webchat'
+                    }
+                  }))}
                   agents={users}
                   isLoading={conversationsLoading || usersLoading}
                 />

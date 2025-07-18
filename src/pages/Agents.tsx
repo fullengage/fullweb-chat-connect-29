@@ -28,15 +28,11 @@ const Agents = () => {
   const handleNewAgent = async (newAgentData: any) => {
     try {
       await createAgentMutation.mutateAsync({
-        account_id: 1, // Default account for now
+        account_id: "1", // Default account for now
         name: newAgentData.name,
         email: newAgentData.email,
         phone: newAgentData.phone,
         role: newAgentData.role,
-        status: newAgentData.status,
-        teams: newAgentData.teams,
-        is_active: true,
-        last_activity: new Date().toISOString()
       });
       setIsNewAgentOpen(false);
     } catch (error) {
@@ -53,12 +49,12 @@ const Agents = () => {
     try {
       await updateAgentMutation.mutateAsync({
         id: updatedAgent.id,
+        account_id: "1",
         name: updatedAgent.name,
         email: updatedAgent.email,
         phone: updatedAgent.phone,
-        status: updatedAgent.status,
+        availability_status: updatedAgent.status as 'online' | 'offline' | 'busy',
         role: updatedAgent.role,
-        teams: updatedAgent.teams
       });
     } catch (error) {
       console.error('Error updating agent:', error);

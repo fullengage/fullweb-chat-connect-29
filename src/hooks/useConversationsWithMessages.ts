@@ -56,6 +56,13 @@ export interface ConversationWithMessages {
     title: string;
     color: string;
   }>;
+  // Add missing properties
+  messages_count?: number;
+  last_message?: {
+    id: number;
+    content: string;
+    created_at: string;
+  };
 }
 
 // Hook para buscar conversas com mensagens
@@ -125,7 +132,13 @@ export const useConversationsWithMessages = () => {
                 title: 'Suporte',
                 color: '#3B82F6'
               }
-            ]
+            ],
+            messages_count: 2,
+            last_message: {
+              id: 2,
+              content: 'Olá João! Claro, vou te ajudar. Qual é o número do seu pedido?',
+              created_at: new Date().toISOString(),
+            }
           },
           {
             id: 2,
@@ -161,7 +174,13 @@ export const useConversationsWithMessages = () => {
                 title: 'Vendas',
                 color: '#10B981'
               }
-            ]
+            ],
+            messages_count: 1,
+            last_message: {
+              id: 3,
+              content: 'Gostaria de saber sobre os preços dos planos',
+              created_at: new Date(Date.now() - 3600000).toISOString(),
+            }
           }
         ];
 

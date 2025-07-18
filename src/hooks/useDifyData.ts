@@ -67,14 +67,6 @@ export const useDifyBots = () => {
     },
     enabled: hasApiKey(),
     staleTime: 10 * 60 * 1000, // 10 minutes
-    onError: (error: any) => {
-      console.error('Erro ao buscar bots do Dify:', error);
-      toast({
-        title: "Erro ao carregar bots",
-        description: "Não foi possível carregar os bots do Dify. Verifique sua API key.",
-        variant: "destructive",
-      });
-    }
   });
 };
 

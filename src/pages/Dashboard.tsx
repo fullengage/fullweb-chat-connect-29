@@ -54,12 +54,12 @@ export default function Dashboard() {
   const {
     data: agents = [],
     isLoading: agentsLoading
-  } = useChatwootAgents(accountIdNumber)
+  } = useChatwootAgents(accountId)
 
   const {
     data: inboxes = [],
     isLoading: inboxesLoading
-  } = useChatwootInboxes(accountIdNumber)
+  } = useChatwootInboxes(accountId)
 
   const updateStatus = useUpdateConversationStatus()
   const { updateConversation } = useChatwootMessages()
@@ -253,6 +253,11 @@ export default function Dashboard() {
     id: conv.id,
     status: conv.status,
     unread_count: conv.unread_count ?? 0,
+    account_id: conv.account_id,
+    contact_id: conv.contact_id,
+    kanban_stage: conv.kanban_stage,
+    last_activity_at: conv.last_activity_at,
+    created_at: conv.created_at,
     contact: conv.contact,
     assignee: conv.assignee,
     inbox: conv.inbox,
@@ -473,6 +478,7 @@ export default function Dashboard() {
                 <KanbanBoard
                   conversations={conversationsForComponent}
                   agents={agents}
+                  onConversationClick={() => {}}
                   onStatusChange={handleKanbanStatusChange}
                   onAssignAgent={handleAssignAgent}
                   isLoading={conversationsLoading}

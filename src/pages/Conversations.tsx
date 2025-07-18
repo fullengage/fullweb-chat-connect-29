@@ -4,7 +4,8 @@ import { AppSidebar } from "@/components/AppSidebar"
 import { ConversationStats } from "@/components/ConversationStats"
 import { ConversationManagement } from "@/components/ConversationManagement"
 import { ConversationsWithMessagesTable } from "@/components/ConversationsWithMessagesTable"
-import { useUsers } from "@/hooks/useUsers"
+import { useUsers, useInboxes } from "@/hooks/useSupabaseData"
+import { useConversationsWithMessages } from "@/hooks/useConversationsWithMessages"
 import { Conversation, ConversationForStats } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -70,31 +71,24 @@ export default function Conversations() {
 
   // Usar o novo hook para conversas com mensagens
   const {
-    data: conversationsWithMessagesData,
+    data: conversationsWithMessages,
     isLoading: conversationsLoading,
     error: conversationsError,
     refetch: refetchConversations
-  } = useConversationsWithMessages({
-    account_id: accountIdNumber > 0 ? accountIdNumber : undefined,
-    page,
-    limit: 20,
-    status: status !== "all" ? status : undefined,
-    search: search || undefined
-  })
+  } = useConversationsWithMessages()
 
-  const conversationsWithMessages = conversationsWithMessagesData?.data || []
-  const totalConversations = conversationsWithMessagesData?.total || 0
-  const hasMoreConversations = conversationsWithMessagesData?.hasMore || false
+  const totalConversations = conversationsWithMessages?.length || 0
+  const hasMoreConversations = false
 
   const {
     data: agents = [],
     isLoading: agentsLoading
-  } = useUsers(accountIdNumber)
+  } = useUsers()
 
   const {
     data: inboxes = [],
     isLoading: inboxesLoading
-  } = useInboxes(accountIdNumber)
+  } = useInboxes()
 
   const handleRefresh = () => {
     refetchConversations()
@@ -105,7 +99,7 @@ export default function Conversations() {
   }
 
   // Filtrar conversas por assignee se necessário
-  const filteredConversations = conversationsWithMessages.filter((conversation) => {
+  const filteredConversations = (conversationsWithMessages || []).filter((conversation) => {
     if (assigneeId === "unassigned") {
       return !conversation.assignee
     }
@@ -117,6 +111,11 @@ export default function Conversations() {
     id: conv.id,
     status: conv.status,
     unread_count: conv.messages_count || 0,
+    account_id: conv.account_id || 1,
+    contact_id: conv.contact?.id || 0,
+    kanban_stage: conv.status,
+    last_activity_at: conv.last_activity_at || conv.updated_at,
+    created_at: conv.created_at || conv.updated_at,
     contact: {
       id: conv.contact?.id || 0,
       name: conv.contact?.name || 'Contato Desconhecido',
@@ -125,7 +124,7 @@ export default function Conversations() {
       avatar_url: conv.contact?.avatar_url
     },
     assignee: conv.assignee ? {
-      id: conv.assignee.id,
+      id: conv.assignee.id.toString(),
       name: conv.assignee.name,
       avatar_url: conv.assignee.avatar_url
     } : undefined,
@@ -288,6 +287,7 @@ export default function Conversations() {
                 <ConversationStats
                   conversations={conversationsForStats}
                   isLoading={conversationsLoading}
+                  accountId={accountId}
                 />
                 
                 <ConversationsWithMessagesTable

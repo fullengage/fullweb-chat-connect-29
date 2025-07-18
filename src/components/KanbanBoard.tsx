@@ -125,7 +125,7 @@ export const KanbanBoard = ({
   const conversationsByStatus = {
     // Conversas não atribuídas (prioridade máxima - aparecem aqui independente do status)
     unassigned: conversations.filter(c => {
-      const hasAssigneeId = c.assignee_id && c.assignee_id !== '' && c.assignee_id !== '0' && c.assignee_id !== 0 && c.assignee_id !== 'undefined' && c.assignee_id !== 'null'
+      const hasAssigneeId = c.assignee_id && c.assignee_id !== '' && c.assignee_id !== '0' && c.assignee_id !== 'undefined' && c.assignee_id !== 'null'
       const hasAssigneeObj = c.assignee && c.assignee.id && c.assignee.id !== '' && c.assignee.id !== '0'
       const hasNoAssignee = !hasAssigneeId && !hasAssigneeObj
       console.log(`Conversa ${c.id}: unassigned=${hasNoAssignee}, assignee_id="${c.assignee_id}"`)
@@ -134,7 +134,7 @@ export const KanbanBoard = ({
     
     // Conversas atribuídas organizadas por status
     open: conversations.filter(c => {
-      const hasAssigneeId = c.assignee_id && c.assignee_id !== '' && c.assignee_id !== '0' && c.assignee_id !== 0 && c.assignee_id !== 'undefined' && c.assignee_id !== 'null'
+      const hasAssigneeId = c.assignee_id && c.assignee_id !== '' && c.assignee_id !== '0' && c.assignee_id !== 'undefined' && c.assignee_id !== 'null'
       const hasAssigneeObj = c.assignee && c.assignee.id && c.assignee.id !== '' && c.assignee.id !== '0'
       const hasAssignee = hasAssigneeId || hasAssigneeObj
       const isOpen = c.status === 'open'
@@ -143,7 +143,7 @@ export const KanbanBoard = ({
     }),
     
     pending: conversations.filter(c => {
-      const hasAssigneeId = c.assignee_id && c.assignee_id !== '' && c.assignee_id !== '0' && c.assignee_id !== 0 && c.assignee_id !== 'undefined' && c.assignee_id !== 'null'
+      const hasAssigneeId = c.assignee_id && c.assignee_id !== '' && c.assignee_id !== '0' && c.assignee_id !== 'undefined' && c.assignee_id !== 'null'
       const hasAssigneeObj = c.assignee && c.assignee.id && c.assignee.id !== '' && c.assignee.id !== '0'
       const hasAssignee = hasAssigneeId || hasAssigneeObj
       const isPending = c.status === 'pending'
@@ -152,7 +152,7 @@ export const KanbanBoard = ({
     }),
     
     resolved: conversations.filter(c => {
-      const hasAssigneeId = c.assignee_id && c.assignee_id !== '' && c.assignee_id !== '0' && c.assignee_id !== 0 && c.assignee_id !== 'undefined' && c.assignee_id !== 'null'
+      const hasAssigneeId = c.assignee_id && c.assignee_id !== '' && c.assignee_id !== '0' && c.assignee_id !== 'undefined' && c.assignee_id !== 'null'
       const hasAssigneeObj = c.assignee && c.assignee.id && c.assignee.id !== '' && c.assignee.id !== '0'
       const hasAssignee = hasAssigneeId || hasAssigneeObj
       const isResolved = c.status === 'resolved'
@@ -242,6 +242,11 @@ export const KanbanBoard = ({
     id: conv.id,
     status: conv.status,
     unread_count: conv.unread_count || 0,
+    account_id: conv.account_id || parseInt(accountId),
+    contact_id: conv.contact_id || conv.contact?.id || 0,
+    kanban_stage: conv.kanban_stage || conv.status,
+    last_activity_at: conv.last_activity_at || conv.updated_at,
+    created_at: conv.created_at || conv.updated_at,
     contact: conv.contact || { id: 0, name: 'Contato Desconhecido' },
     assignee: conv.assignee ? {
       id: conv.assignee.id, // Já é string no tipo Conversation
@@ -251,7 +256,6 @@ export const KanbanBoard = ({
     inbox: conv.inbox,
     updated_at: conv.updated_at,
     messages: conv.messages || [],
-    account_id: conv.account_id || parseInt(accountId) // Adicionar account_id para as etiquetas
   })
 
   if (isLoading) {
