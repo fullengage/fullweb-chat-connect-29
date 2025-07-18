@@ -4,23 +4,20 @@ import { AppSidebar } from "@/components/AppSidebar"
 import { ChatwootFilters } from "@/components/ChatwootFilters"
 import { ConversationStats } from "@/components/ConversationStats"
 import { ConversationManagement } from "@/components/ConversationManagement"
-
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { RefreshCw, MessageSquare, BarChart3 } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { RefreshCw, MessageSquare, BarChart3, Kanban, Users, Clock, AlertCircle, CheckCircle, UserPlus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { KanbanBoard } from "@/components/KanbanBoard"
-import { Kanban } from "lucide-react"
 import { ConversationForStats, Conversation } from "@/types"
 import { useChatwootConversations } from "@/hooks/useChatwootProxy"
-
-import { useResolvedConversations, useForceResolveConversation } from "@/hooks/useResolvedConversations"
 import { useUpdateConversationStatus } from "@/hooks/useUpdateConversationStatus"
 import { useChatwootMessages } from "@/hooks/useChatwootConversationMessages"
 import { useChatwootAgents } from "@/hooks/useChatwootAgents"
 import { useChatwootInboxes } from "@/hooks/useChatwootInboxes"
 
-// Define Agent type locally to match what ChatwootFilters expects
 interface LocalAgent {
   id: number
   name: string
@@ -37,7 +34,7 @@ export default function Dashboard() {
 
   const accountIdNumber = accountId ? parseInt(accountId) : 1
 
-  // ✅ CORREÇÃO: Hook principal que agora usa filtros corretos do proxy
+  // Main conversations hook
   const {
     data: conversations = [],
     isLoading: conversationsLoading,
@@ -45,7 +42,7 @@ export default function Dashboard() {
     refetch: refreshConversations
   } = useChatwootConversations({
     account_id: accountId,
-    status: status, // ✅ CORRETO: Passa o status selecionado para a API
+    status: status,
     assignee_id: assigneeId,
     inbox_id: inboxId,
     team_id: "all",
@@ -53,13 +50,7 @@ export default function Dashboard() {
     page: 1
   })
 
-  // ✅ MANTER: Hooks específicos para casos especiais
-  const {
-    data: resolvedConversations = [],
-    isLoading: resolvedLoading,
-    refetch: refreshResolved
-  } = useResolvedConversations(accountId)
-
+  // Agents and inboxes data
   const {
     data: agents = [],
     isLoading: agentsLoading
@@ -72,11 +63,9 @@ export default function Dashboard() {
 
   const updateStatus = useUpdateConversationStatus()
   const { updateConversation } = useChatwootMessages()
-  const { forceResolve } = useForceResolveConversation()
 
   const handleRefresh = () => {
     refreshConversations()
-    refreshResolved() // ✅ ADICIONAR: Refresh das conversas resolvidas também
     toast({
       title: "Atualizando dados",
       description: "Buscando as informações mais recentes...",
@@ -85,19 +74,23 @@ export default function Dashboard() {
 
   const handleKanbanStatusChange = async (conversationId: number, newStatus: string) => {
     try {
-      console.log(`🔄 Atualizando status da conversa ${conversationId} para ${newStatus}`)
       await updateStatus.mutateAsync({ conversationId, status: newStatus, accountId })
-
-      console.log(`✅ Status atualizado com sucesso, fazendo refresh...`)
-
-      // ✅ CORREÇÃO: Refresh adequado com delay otimizado
+      
       setTimeout(() => {
         refreshConversations()
-        refreshResolved()
-      }, 800) // Delay otimizado para sincronização
-
+      }, 800)
+      
+      toast({
+        title: "Status atualizado",
+        description: `Conversa movida para ${newStatus}`,
+      })
     } catch (error) {
-      console.error('❌ Error updating conversation status:', error)
+      console.error('Error updating conversation status:', error)
+      toast({
+        title: "Erro ao atualizar status",
+        description: "Não foi possível atualizar o status. Tente novamente.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -109,7 +102,6 @@ export default function Dashboard() {
         assigneeId: agentId
       })
 
-      // ✅ CORREÇÃO: Refresh adequado
       setTimeout(() => {
         refreshConversations()
       }, 500)
@@ -130,76 +122,132 @@ export default function Dashboard() {
     }
   }
 
-  // ✅ CORREÇÃO: Remover filtro duplicado - a API já retorna dados filtrados
-  // O ChatwootFilters já passa os filtros para a API via useChatwootConversations
+  // Quick actions
+  const handleBulkResolve = async () => {
+    const openConversations = conversations.filter(conv => conv.status === 'open')
+    if (openConversations.length === 0) {
+      toast({
+        title: "Nenhuma conversa aberta",
+        description: "Não há conversas abertas para resolver",
+      })
+      return
+    }
 
-  // ✅ DEBUG: Log melhorado
-  console.log('🔍 Dashboard - Estado atual dos filtros:', { status, assigneeId, inboxId })
-  console.log('🔍 Dashboard - Conversas recebidas da API:', conversations?.length || 0)
-  console.log('🔍 Dashboard - Conversas diretas da API:', conversations?.length || 0)
-
-  if (status === 'resolved') {
-    console.log('🔍 Dashboard - Conversas resolvidas específicas:', resolvedConversations?.length || 0)
+    try {
+      await Promise.all(
+        openConversations.slice(0, 5).map(conv => 
+          updateStatus.mutateAsync({ conversationId: conv.id, status: 'resolved', accountId })
+        )
+      )
+      
+      setTimeout(() => {
+        refreshConversations()
+      }, 1000)
+      
+      toast({
+        title: "Conversas resolvidas",
+        description: `${Math.min(openConversations.length, 5)} conversas foram resolvidas`,
+      })
+    } catch (error) {
+      toast({
+        title: "Erro ao resolver conversas",
+        description: "Não foi possível resolver todas as conversas",
+        variant: "destructive",
+      })
+    }
   }
 
-  // ✅ CORREÇÃO: Usar dados corretos baseado no status selecionado
-  const conversationsToShow = status === 'resolved' && resolvedConversations.length > 0
-    ? resolvedConversations
-    : conversations;
-
-  console.log('🔍 Dashboard - Conversas finais a exibir:', conversationsToShow?.length || 0)
-
-  // ✅ MANTER: Mapeamento para formato dos componentes
-  const conversationsForComponent: Conversation[] = conversationsToShow.map((conv: any) => {
-    console.log(`🔍 Dashboard - Mapeando conversa ${conv.id}:`, {
-      assignee_id: conv.assignee_id,
-      assignee: conv.assignee,
-      assignee_name: conv.assignee_name,
-      status: conv.status
-    })
-
-    return {
-      id: conv.id,
-      status: conv.status,
-      unread_count: conv.unread_count || 0,
-      contact: {
-        id: conv.contact?.id || conv.meta?.sender?.id || 0,
-        name:
-          conv.contact?.name ||
-          conv.meta?.sender?.name ||
-          conv.sender?.name ||
-          (conv.messages?.[0]?.sender?.name) ||
-          "Contato Desconhecido",
-        email: conv.contact?.email || conv.meta?.sender?.email || null,
-        phone: conv.contact?.phone_number || conv.meta?.sender?.phone_number || null,
-        avatar_url:
-          conv.contact?.avatar_url ||
-          conv.meta?.sender?.avatar_url ||
-          conv.sender?.avatar_url ||
-          (conv.messages?.[0]?.sender?.avatar_url) ||
-          null,
-      },
-      assignee_id: conv.assignee_id && conv.assignee_id !== 'undefined' && conv.assignee_id !== 'null' ? conv.assignee_id : undefined,
-      assignee: conv.assignee_id && conv.assignee_id !== 'undefined' && conv.assignee_id !== null ? {
-        id: conv.assignee_id,
-        name: conv.assignee_name || conv.assignee?.name || "",
-        avatar_url: conv.assignee_avatar_url || conv.assignee?.avatar_url || ""
-      } : undefined,
-      inbox: {
-        id: conv.inbox_id || 1,
-        name: conv.inbox_name || "Inbox Padrão",
-        channel_type: conv.channel || "webchat"
-      },
-      updated_at: conv.updated_at,
-      created_at: conv.created_at || conv.updated_at || new Date().toISOString(),
-      messages: conv.messages || [],
-      account_id: conv.account_id || 1,
-      contact_id: conv.contact?.id || conv.meta?.sender?.id || 0,
-      kanban_stage: conv.kanban_stage || "",
-      last_activity_at: conv.updated_at,
-      severity: conv.severity || 0,
+  const handleAssignAllToMe = async () => {
+    const unassignedConversations = conversations.filter(conv => !conv.assignee_id)
+    if (unassignedConversations.length === 0) {
+      toast({
+        title: "Nenhuma conversa não atribuída",
+        description: "Todas as conversas já estão atribuídas",
+      })
+      return
     }
-  });
+
+    // Assumindo que o primeiro agente é o usuário atual
+    const currentAgent = agents[0]
+    if (!currentAgent) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível identificar o agente atual",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      await Promise.all(
+        unassignedConversations.slice(0, 5).map(conv => 
+          updateConversation({
+            accountId,
+            conversationId: conv.id,
+            assigneeId: currentAgent.id
+          })
+        )
+      )
+      
+      setTimeout(() => {
+        refreshConversations()
+      }, 1000)
+      
+      toast({
+        title: "Conversas atribuídas",
+        description: `${Math.min(unassignedConversations.length, 5)} conversas foram atribuídas a você`,
+      })
+    } catch (error) {
+      toast({
+        title: "Erro ao atribuir conversas",
+        description: "Não foi possível atribuir todas as conversas",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Clean data transformation
+  const conversationsForComponent: Conversation[] = conversations.map((conv: any) => ({
+    id: conv.id,
+    status: conv.status,
+    unread_count: conv.unread_count || 0,
+    contact: {
+      id: conv.contact?.id || conv.meta?.sender?.id || 0,
+      name:
+        conv.contact?.name ||
+        conv.meta?.sender?.name ||
+        conv.sender?.name ||
+        (conv.messages?.[0]?.sender?.name) ||
+        "Contato Desconhecido",
+      email: conv.contact?.email || conv.meta?.sender?.email || null,
+      phone: conv.contact?.phone_number || conv.meta?.sender?.phone_number || null,
+      avatar_url:
+        conv.contact?.avatar_url ||
+        conv.meta?.sender?.avatar_url ||
+        conv.sender?.avatar_url ||
+        (conv.messages?.[0]?.sender?.avatar_url) ||
+        null,
+    },
+    assignee_id: conv.assignee_id && conv.assignee_id !== 'undefined' && conv.assignee_id !== 'null' ? conv.assignee_id : undefined,
+    assignee: conv.assignee_id && conv.assignee_id !== 'undefined' && conv.assignee_id !== null ? {
+      id: conv.assignee_id,
+      name: conv.assignee_name || conv.assignee?.name || "",
+      avatar_url: conv.assignee_avatar_url || conv.assignee?.avatar_url || ""
+    } : undefined,
+    inbox: {
+      id: conv.inbox_id || 1,
+      name: conv.inbox_name || "Inbox Padrão",
+      channel_type: conv.channel || "webchat"
+    },
+    updated_at: conv.updated_at,
+    created_at: conv.created_at || conv.updated_at || new Date().toISOString(),
+    messages: conv.messages || [],
+    account_id: conv.account_id || 1,
+    contact_id: conv.contact?.id || conv.meta?.sender?.id || 0,
+    kanban_stage: conv.kanban_stage || "",
+    last_activity_at: conv.updated_at,
+    severity: conv.severity || 0,
+  }));
 
   const conversationsForStats: ConversationForStats[] = conversationsForComponent.map((conv) => ({
     id: conv.id,
@@ -218,35 +266,46 @@ export default function Dashboard() {
     email: agent.email
   }))
 
-  // ✅ MANTER: Funções de teste
-  const testResolveFirstConversation = async () => {
-    if (!conversations.length) {
-      toast({
-        title: "Nenhuma conversa disponível",
-        description: "Não há conversas para testar",
-        variant: "destructive",
-      })
-      return
-    }
+  // Performance metrics
+  const totalConversations = conversations.length
+  const unreadCount = conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0)
+  const openConversations = conversations.filter(conv => conv.status === 'open').length
+  const resolvedConversations = conversations.filter(conv => conv.status === 'resolved').length
+  const unassignedConversations = conversations.filter(conv => !conv.assignee_id).length
+  const pendingConversations = conversations.filter(conv => conv.status === 'pending').length
 
-    const firstConversation = conversations[0]
-    console.log(`🧪 Testando resolução da conversa ${firstConversation.id}`)
-
-    try {
-      await updateStatus.mutateAsync({
-        conversationId: firstConversation.id,
-        status: 'resolved',
-        accountId
-      })
-
-      setTimeout(() => {
-        refreshConversations()
-        refreshResolved()
-      }, 1000)
-
-    } catch (error) {
-      console.error('❌ Erro ao testar resolução:', error)
-    }
+  // Error handling
+  if (conversationsError) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <AppSidebar />
+          <SidebarInset>
+            <div className="flex-1 p-6">
+              <div className="flex items-center justify-center h-full">
+                <Card className="w-full max-w-md">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-destructive" />
+                      Erro ao carregar dados
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground mb-4">
+                      Não foi possível carregar as conversas. Verifique sua conexão e tente novamente.
+                    </p>
+                    <Button onClick={handleRefresh} className="w-full">
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Tentar novamente
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
+    )
   }
 
   return (
@@ -255,13 +314,14 @@ export default function Dashboard() {
         <AppSidebar />
         <SidebarInset>
           <div className="flex-1 p-6">
-            <div className="flex items-center justify-between border-b pb-4">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b pb-4 mb-6">
               <div className="flex items-center space-x-4">
                 <SidebarTrigger />
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-foreground">Painel de Atendimento ao Cliente</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
                   <p className="text-muted-foreground">
-                    Gerencie suas conversas em tempo real
+                    Gerencie suas conversas e monitore performance
                   </p>
                 </div>
               </div>
@@ -270,63 +330,102 @@ export default function Dashboard() {
                   <RefreshCw className={`h-4 w-4 mr-2 ${conversationsLoading ? 'animate-spin' : ''}`} />
                   Atualizar
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => testResolveFirstConversation()}
-                  disabled={conversationsLoading || !conversations.length}
-                >
-                  🧪 Testar Resolver
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    if (!conversations.length) return
-                    const firstConv = conversations[0]
-                    console.log(`🔧 FORÇANDO resolução da conversa ${firstConv.id}`)
-                    try {
-                      await forceResolve(firstConv.id, accountId)
-                      setTimeout(() => {
-                        refreshConversations()
-                        refreshResolved()
-                      }, 1000)
-                    } catch (error) {
-                      console.error('❌ Erro ao forçar resolução:', error)
-                    }
-                  }}
-                  disabled={conversationsLoading || !conversations.length}
-                >
-                  🔧 Forçar Resolver
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    console.log('🔍 DEBUG - Estado atual:')
-                    console.log('📊 Status selecionado:', status)
-                    console.log('📊 Conversas da API principal:', conversations.length)
-                    console.log('📊 Conversas diretas da API:', conversations.length)
-                    console.log('📊 Conversas resolvidas (hook específico):', resolvedConversations.length)
-                    console.log('📊 Conversas finais exibidas:', conversationsForComponent.length)
-
-                    // Log detalhado dos status
-                    const statusCount = conversations.reduce((acc: any, conv: any) => {
-                      acc[conv.status] = (acc[conv.status] || 0) + 1
-                      return acc
-                    }, {})
-                    console.log('📊 Contagem por status:', statusCount)
-                  }}
-                >
-                  🔍 Debug Status
-                </Button>
               </div>
             </div>
 
-            <div className="bg-card border border-card rounded-xl p-4 mb-6">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total</CardTitle>
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{totalConversations}</div>
+                  <p className="text-xs text-muted-foreground">conversas</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Abertas</CardTitle>
+                  <Clock className="h-4 w-4 text-orange-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{openConversations}</div>
+                  <p className="text-xs text-muted-foreground">aguardando</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+                  <AlertCircle className="h-4 w-4 text-yellow-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{pendingConversations}</div>
+                  <p className="text-xs text-muted-foreground">em análise</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Resolvidas</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{resolvedConversations}</div>
+                  <p className="text-xs text-muted-foreground">finalizadas</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Não Atribuídas</CardTitle>
+                  <Users className="h-4 w-4 text-blue-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{unassignedConversations}</div>
+                  <p className="text-xs text-muted-foreground">sem agente</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkResolve}
+                disabled={conversationsLoading || openConversations === 0}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Resolver 5 conversas
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAssignAllToMe}
+                disabled={conversationsLoading || unassignedConversations === 0}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Atribuir a mim
+              </Button>
+              {unreadCount > 0 && (
+                <Badge variant="destructive" className="ml-2">
+                  {unreadCount} não lidas
+                </Badge>
+              )}
+            </div>
+
+            {/* Filters */}
+            <div className="bg-card border rounded-lg p-4 mb-6">
               <ChatwootFilters
                 status={status}
                 assigneeId={assigneeId}
                 inboxId={inboxId}
                 accountId={accountId}
-                onStatusChange={setStatus} // ✅ IMPORTANTE: Isso dispara nova busca na API
+                onStatusChange={setStatus}
                 onAssigneeChange={setAssigneeId}
                 onInboxChange={setInboxId}
                 onAccountIdChange={setAccountId}
@@ -336,61 +435,60 @@ export default function Dashboard() {
               />
             </div>
 
-            {accountIdNumber > 0 && (
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="overview" className="flex items-center space-x-2">
-                    <BarChart3 className="h-4 w-4" />
-                    <span>Visão Geral</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="kanban" className="flex items-center space-x-2">
-                    <Kanban className="h-4 w-4" />
-                    <span>Kanban</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="conversations" className="flex items-center space-x-2">
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Conversas</span>
-                  </TabsTrigger>
-                </TabsList>
+            {/* Main Content */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="overview" className="flex items-center space-x-2">
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Visão Geral</span>
+                </TabsTrigger>
+                <TabsTrigger value="kanban" className="flex items-center space-x-2">
+                  <Kanban className="h-4 w-4" />
+                  <span>Kanban</span>
+                </TabsTrigger>
+                <TabsTrigger value="conversations" className="flex items-center space-x-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Conversas</span>
+                </TabsTrigger>
+              </TabsList>
 
-                <TabsContent value="overview" className="space-y-6">
-                  <ConversationStats
-                    conversations={conversationsForStats}
-                    accountId={accountId}
-                    status={status}
-                    inboxId={inboxId}
-                    searchQuery=""
-                  />
-                  <ConversationManagement
-                    conversations={conversationsForComponent}
-                    agents={agents}
-                    onAssignAgent={handleAssignAgent}
-                    onStatusChange={handleKanbanStatusChange}
-                    isLoading={conversationsLoading || resolvedLoading}
-                  />
-                </TabsContent>
+              <TabsContent value="overview" className="space-y-6">
+                <ConversationStats
+                  conversations={conversationsForStats}
+                  accountId={accountId}
+                  status={status}
+                  inboxId={inboxId}
+                  searchQuery=""
+                />
+                <ConversationManagement
+                  conversations={conversationsForComponent}
+                  agents={agents}
+                  onAssignAgent={handleAssignAgent}
+                  onStatusChange={handleKanbanStatusChange}
+                  isLoading={conversationsLoading}
+                />
+              </TabsContent>
 
-                <TabsContent value="kanban" className="space-y-6">
-                  <KanbanBoard
-                    conversations={conversationsForComponent}
-                    agents={agents}
-                    onStatusChange={handleKanbanStatusChange}
-                    onAssignAgent={handleAssignAgent}
-                    isLoading={conversationsLoading || resolvedLoading}
-                  />
-                </TabsContent>
+              <TabsContent value="kanban" className="space-y-6">
+                <KanbanBoard
+                  conversations={conversationsForComponent}
+                  agents={agents}
+                  onStatusChange={handleKanbanStatusChange}
+                  onAssignAgent={handleAssignAgent}
+                  isLoading={conversationsLoading}
+                />
+              </TabsContent>
 
-                <TabsContent value="conversations" className="space-y-6">
-                  <ConversationManagement
-                    conversations={conversationsForComponent}
-                    agents={agents}
-                    onAssignAgent={handleAssignAgent}
-                    onStatusChange={handleKanbanStatusChange}
-                    isLoading={conversationsLoading || resolvedLoading}
-                  />
-                </TabsContent>
-              </Tabs>
-            )}
+              <TabsContent value="conversations" className="space-y-6">
+                <ConversationManagement
+                  conversations={conversationsForComponent}
+                  agents={agents}
+                  onAssignAgent={handleAssignAgent}
+                  onStatusChange={handleKanbanStatusChange}
+                  isLoading={conversationsLoading}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         </SidebarInset>
       </div>
