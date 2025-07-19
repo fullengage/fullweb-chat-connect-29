@@ -26,22 +26,27 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     )
 
-    // Get the authorization header
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('No authorization header')
+    // Note: JWT verification disabled in config.toml for this function
+
+    // Get parameters from URL or body
+    let account_id: number
+    let status: string | undefined
+    let assignee_id: number | undefined  
+    let inbox_id: number | undefined
+
+    if (req.method === 'GET') {
+      const url = new URL(req.url)
+      account_id = parseInt(url.searchParams.get('account_id') || '1')
+      status = url.searchParams.get('status') || undefined
+      assignee_id = url.searchParams.get('assignee_id') ? parseInt(url.searchParams.get('assignee_id')!) : undefined
+      inbox_id = url.searchParams.get('inbox_id') ? parseInt(url.searchParams.get('inbox_id')!) : undefined
+    } else {
+      const body = await req.json() as ConversationFilters
+      account_id = body.account_id
+      status = body.status
+      assignee_id = body.assignee_id
+      inbox_id = body.inbox_id
     }
-
-    // Verify the user
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    )
-
-    if (authError || !user) {
-      throw new Error('Invalid authorization')
-    }
-
-    const { account_id, status, assignee_id, inbox_id } = await req.json() as ConversationFilters
 
     const chatwootToken = Deno.env.get('CHATWOOT_API_TOKEN')
     if (!chatwootToken) {
@@ -50,11 +55,12 @@ serve(async (req) => {
 
     // Build query parameters
     const params = new URLSearchParams()
-    if (status) params.append('status', status)
+    if (status && status !== 'all') params.append('status', status)
     if (assignee_id) params.append('assignee_id', assignee_id.toString())
     if (inbox_id) params.append('inbox_id', inbox_id.toString())
 
-    const chatwootUrl = `https://app.chatwoot.com/api/v1/accounts/${account_id}/conversations?${params.toString()}`
+    const chatwootBaseUrl = Deno.env.get('CHATWOOT_BASE_URL') || 'https://app.chatwoot.com'
+    const chatwootUrl = `${chatwootBaseUrl}/api/v1/accounts/${account_id}/conversations?${params.toString()}`
     
     console.log('Fetching conversations from:', chatwootUrl)
 

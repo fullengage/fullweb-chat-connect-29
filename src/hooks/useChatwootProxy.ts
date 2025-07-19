@@ -57,19 +57,14 @@ export const useChatwootConversations = (filters: ConversationFilters) => {
         }
         
         const result = await response.json()
-        console.log('✅ Conversas recebidas via proxy:', result)
+        console.log('✅ Conversas recebidas via edge function:', result)
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Erro na edge function')
+        }
         
         // Extrair dados das conversas
-        let conversationsData = []
-        if (Array.isArray(result)) {
-          conversationsData = result
-        } else if (result.data?.payload) {
-          conversationsData = result.data.payload
-        } else if (result.payload) {
-          conversationsData = result.payload
-        } else if (result.data) {
-          conversationsData = result.data
-        }
+        const conversationsData = result.data || []
         
         console.log('📊 Total de conversas extraídas:', conversationsData.length)
         
@@ -78,7 +73,7 @@ export const useChatwootConversations = (filters: ConversationFilters) => {
           console.log('🔍 CONVERSAS RESOLVIDAS ENCONTRADAS:', conversationsData.map(c => ({
             id: c.id,
             status: c.status,
-            contact_name: c.contact?.name || c.meta?.sender?.name || 'Sem nome'
+            contact_name: c.meta?.sender?.name || 'Sem nome'
           })))
         }
         
