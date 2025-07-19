@@ -46,8 +46,8 @@ export const useChatwootConversations = (filters: ConversationFilters) => {
       params.append('page', filters.page.toString())
       
       const endpoint = `accounts/${filters.account_id}/conversations`
-      const url = `/api/chatwoot-proxy.php?endpoint=${endpoint}&account_id=${filters.account_id}&${params.toString()}`
-      console.log('🔗 URL completa (seguindo doc Chatwoot):', url)
+      const url = `https://fjihzmwtdqnigkqbugrh.supabase.co/functions/v1/chatwoot-conversations?account_id=${filters.account_id}&${params.toString()}`
+      console.log('🔗 URL completa (edge function):', url)
       
       try {
         const response = await fetch(url)
