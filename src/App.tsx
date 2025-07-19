@@ -46,7 +46,7 @@ function AppRoutes() {
       />
       <Route 
         path="/" 
-        element={<Landing />}
+        element={user ? <Navigate to="/dashboard" replace /> : <Landing />}
       />
       <Route 
         path="/dashboard" 
