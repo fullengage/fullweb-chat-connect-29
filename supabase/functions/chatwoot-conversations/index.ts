@@ -50,8 +50,11 @@ serve(async (req) => {
 
     const chatwootToken = Deno.env.get('CHATWOOT_API_TOKEN')
     if (!chatwootToken) {
+      console.error('CHATWOOT_API_TOKEN not found in environment variables')
       throw new Error('Chatwoot API token not configured')
     }
+    
+    console.log('Using Chatwoot token:', chatwootToken.substring(0, 10) + '...')
 
     // Build query parameters
     const params = new URLSearchParams()
